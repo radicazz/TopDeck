@@ -4,6 +4,7 @@ using UnityEngine.SceneManagement;
 using TMPro;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 public class GameController : MonoBehaviour
 {
@@ -19,10 +20,13 @@ public class GameController : MonoBehaviour
     [SerializeField] private TextMeshProUGUI stateText;
     [SerializeField] private TextMeshProUGUI moneyText;
     [SerializeField] private TextMeshProUGUI timerText;
+    [SerializeField] private TextMeshProUGUI playerHealthText;
 
     [Header("Prefabs")]
     [SerializeField] private GameObject defenderPrefab;
-    [SerializeField] private GameObject attackerPrefab;
+
+    [Header("Attacker Types")]
+    [SerializeField] private List<AttackerTypeDefinition> attackerTypes = new List<AttackerTypeDefinition>();
 
     [Header("Spawn Settings")]
     [SerializeField] private int baseEnemiesPerWave = 5;
@@ -31,6 +35,10 @@ public class GameController : MonoBehaviour
 
     [Header("Debug")]
     [SerializeField] private bool debugMode = true;
+
+    [Header("Time Control")]
+    [SerializeField] private List<float> timeScaleOptions = new List<float> { 1f, 2f };
+    [SerializeField] private KeyCode timeScaleToggleKey = KeyCode.Space;
 
     // Game State
     public enum GamePhase { Preparation, Combat, GameOver }
@@ -44,6 +52,8 @@ public class GameController : MonoBehaviour
     public int enemiesRemaining;
     private float timer;
     private float lastTowerPlacementTime = 0f; // Cooldown for tower placement
+    private int enemiesAlive = 0;
+    private int currentTimeScaleIndex = 0;
 
     // Map References
     private MapController mapController;
@@ -88,6 +98,7 @@ public class GameController : MonoBehaviour
         }
 
         InitializeGame();
+        EnsureAttackerTypesConfigured();
 
         // Add a small delay to ensure map is generated
         StartCoroutine(DelayedInitialization());
@@ -109,8 +120,33 @@ public class GameController : MonoBehaviour
         currentPhase = GamePhase.Preparation;
         timer = prepTime;
 
+        if (timeScaleOptions == null || timeScaleOptions.Count == 0)
+        {
+            timeScaleOptions = new List<float> { 1f };
+        }
+
+        currentTimeScaleIndex = 0;
+        ApplyCurrentTimeScale();
+
         Debug.Log($"Game initialized - Money: ${money}, Health: {health}, Wave: {currentWave}");
         UpdateUI();
+    }
+
+    void EnsureAttackerTypesConfigured()
+    {
+        if (attackerTypes == null)
+        {
+            attackerTypes = new List<AttackerTypeDefinition>();
+        }
+
+        attackerTypes.RemoveAll(type => type == null);
+
+        bool hasValidType = attackerTypes.Any(type => type != null && type.Prefab != null);
+
+        if (!hasValidType)
+        {
+            Debug.LogWarning("No attacker types configured. Please assign at least one attacker type with a valid prefab in the inspector.");
+        }
     }
 
     void FindSpawnPoints()
@@ -226,6 +262,8 @@ public class GameController : MonoBehaviour
 
     void Update()
     {
+        HandleTimeScaleToggle();
+
         // Debug: Confirm Update is running and show current phase
         if (Input.GetMouseButtonDown(0) && debugMode)
         {
@@ -243,6 +281,46 @@ public class GameController : MonoBehaviour
         }
 
         UpdateUI();
+    }
+
+    void HandleTimeScaleToggle()
+    {
+        if (timeScaleOptions == null || timeScaleOptions.Count == 0)
+        {
+            return;
+        }
+
+        if (Input.GetKeyDown(timeScaleToggleKey))
+        {
+            currentTimeScaleIndex = (currentTimeScaleIndex + 1) % timeScaleOptions.Count;
+            ApplyCurrentTimeScale();
+        }
+    }
+
+    void ApplyCurrentTimeScale()
+    {
+        if (timeScaleOptions == null || timeScaleOptions.Count == 0)
+        {
+            return;
+        }
+
+        currentTimeScaleIndex = Mathf.Clamp(currentTimeScaleIndex, 0, timeScaleOptions.Count - 1);
+
+        float targetScale = timeScaleOptions[currentTimeScaleIndex];
+        if (targetScale < 0f)
+        {
+            targetScale = 0f;
+        }
+
+        if (!Mathf.Approximately(Time.timeScale, targetScale))
+        {
+            Time.timeScale = targetScale;
+
+            if (debugMode)
+            {
+                Debug.Log($"Time scale changed to {targetScale}x via {timeScaleToggleKey}");
+            }
+        }
     }
 
     void HandlePreparationPhase()
@@ -278,22 +356,13 @@ public class GameController : MonoBehaviour
         // Check if all enemies are dead
         CleanupDeadEnemies();
 
-        if (activeEnemies.Count == 0 && enemiesRemaining <= 0 && currentPhase == GamePhase.Combat)
+        CheckGameOverCondition("combat phase");
+        if (currentPhase == GamePhase.GameOver)
         {
-            // Wave complete, start preparation for next wave
-            Debug.Log($"Wave {currentWave} completed! Starting preparation for wave {currentWave + 1}.");
-            currentWave++;
-            // DON'T reset health - let it carry over between waves for difficulty
-            // health = startingHealth; // Remove this line to make waves more challenging
-            StartPreparationPhase();
+            return;
         }
 
-        // Check game over condition
-        if (health <= 0)
-        {
-            Debug.Log("Player health reached 0, game over!");
-            GameOver();
-        }
+        CheckWaveCompletion("combat phase");
     }
 
     void HandleTowerPlacement()
@@ -573,6 +642,9 @@ public class GameController : MonoBehaviour
     {
         currentPhase = GamePhase.Preparation;
         timer = prepTime;
+        CleanupDeadEnemies();
+        enemiesAlive = Mathf.Max(0, enemiesAlive);
+        enemiesRemaining = 0;
         ClearHighlight();
         Debug.Log($"Started preparation phase for wave {currentWave}");
     }
@@ -580,10 +652,12 @@ public class GameController : MonoBehaviour
     void StartCombatPhase()
     {
         currentPhase = GamePhase.Combat;
+        CleanupDeadEnemies();
         enemiesRemaining = GetEnemiesForWave();
+        enemiesAlive = activeEnemies.Count;
         ClearHighlight();
 
-        Debug.Log($"Started combat phase - Wave {currentWave}, Enemies to spawn: {enemiesRemaining}");
+        Debug.Log($"Started combat phase - Wave {currentWave}, Enemies to spawn: {enemiesRemaining}, Alive: {enemiesAlive}, Health: {health}");
         StartCoroutine(SpawnEnemies());
     }
 
@@ -604,10 +678,29 @@ public class GameController : MonoBehaviour
             yield break;
         }
 
-        for (int i = 0; i < enemiesToSpawn; i++)
+        List<AttackerTypeDefinition> spawnQueue = BuildAttackerSpawnQueue(enemiesToSpawn);
+
+        if (spawnQueue.Count == 0)
+        {
+            Debug.LogError("Spawn queue was empty. Ensure attacker types are configured with valid prefabs.");
+            yield break;
+        }
+
+        int spawnedCount = 0;
+
+        for (int i = 0; i < spawnQueue.Count; i++)
         {
             if (spawnPoints.Count > 0)
             {
+                AttackerTypeDefinition attackerType = spawnQueue[i];
+                if (attackerType == null || attackerType.Prefab == null)
+                {
+                    Debug.LogError($"Unable to spawn enemy {i + 1}/{spawnQueue.Count} - attacker type entry is missing or has no prefab assigned.");
+                    continue;
+                }
+
+                GameObject prefabToSpawn = attackerType.Prefab;
+
                 // Select a random path start point
                 int pathIndex = Random.Range(0, spawnPoints.Count);
                 Vector3 spawnPoint = spawnPoints[pathIndex];
@@ -615,35 +708,40 @@ public class GameController : MonoBehaviour
                 // Ensure enemy spawns exactly on the black tile
                 Vector3 exactSpawnPoint = new Vector3(spawnPoint.x, spawnPoint.y + 0.5f, spawnPoint.z);
 
-                Debug.Log($"Spawning enemy {i + 1}/{enemiesToSpawn} at path {pathIndex} position: {exactSpawnPoint}");
+                string typeLabel = attackerType.Id;
+                Debug.Log($"Spawning enemy {i + 1}/{enemiesToSpawn} ({typeLabel}) at path {pathIndex} position: {exactSpawnPoint}");
 
-                GameObject enemy = Instantiate(attackerPrefab, exactSpawnPoint, Quaternion.identity);
+                GameObject enemy = Instantiate(prefabToSpawn, exactSpawnPoint, Quaternion.identity);
 
                 if (enemy == null)
                 {
-                    Debug.LogError("Failed to instantiate enemy! Check if attackerPrefab is assigned.");
+                    Debug.LogError("Failed to instantiate enemy! Check attacker type prefab assignments.");
                     continue;
                 }
 
                 AttackerController attacker = enemy.GetComponent<AttackerController>();
                 if (attacker != null)
                 {
-                    int enemyHealth = GetEnemyHealthForWave();
+                    int enemyHealth = GetEnemyHealthForWave(attackerType);
 
                     // Get the specific path for this enemy to follow
                     List<Vector3> enemyPath = mapController.GetPathByIndex(pathIndex);
 
                     if (enemyPath.Count > 0)
                     {
-                        attacker.Initialize(enemyHealth, enemyPath, exactSpawnPoint);
+                        attacker.Initialize(enemyHealth, enemyPath, exactSpawnPoint, attackerType);
                         activeEnemies.Add(attacker);
-                        Debug.Log($"Enemy initialized with {enemyHealth} health, following path {pathIndex} with {enemyPath.Count} waypoints");
+                        enemiesAlive = activeEnemies.Count;
+                        spawnedCount++;
+                        Debug.Log($"Enemy ({typeLabel}) initialized with {enemyHealth} health, following path {pathIndex} with {enemyPath.Count} waypoints");
                     }
                     else
                     {
                         Debug.LogError($"No path found for index {pathIndex}, using all black tiles");
-                        attacker.Initialize(enemyHealth, pathPoints, exactSpawnPoint);
+                        attacker.Initialize(enemyHealth, pathPoints, exactSpawnPoint, attackerType);
                         activeEnemies.Add(attacker);
+                        enemiesAlive = activeEnemies.Count;
+                        spawnedCount++;
                     }
                 }
                 else
@@ -651,61 +749,237 @@ public class GameController : MonoBehaviour
                     Debug.LogError("Enemy prefab missing AttackerController component!");
                     Destroy(enemy); // Clean up failed enemy
                 }
+
+                enemiesRemaining = Mathf.Max(0, enemiesRemaining - 1);
             }
             else
             {
                 Debug.LogError("No spawn points available!");
+                enemiesRemaining = 0;
                 break;
             }
 
             yield return new WaitForSeconds(enemySpawnDelay);
         }
 
-        // Reset enemiesRemaining since they're all spawned now
-        enemiesRemaining = 0;
-        Debug.Log($"Finished spawning enemies. Active enemies: {activeEnemies.Count}");
+        Debug.Log($"Finished spawning enemies. Spawned: {spawnedCount}, To spawn remaining: {enemiesRemaining}, Active enemies: {activeEnemies.Count}");
+
+        CheckWaveCompletion("spawn complete");
     }
 
-    int GetEnemyHealthForWave()
+    List<AttackerTypeDefinition> BuildAttackerSpawnQueue(int totalSpawns)
     {
-        return Mathf.RoundToInt(100 * Mathf.Pow(waveHealthMultiplier, currentWave - 1));
+        List<AttackerTypeDefinition> validTypes = GetValidAttackerTypes();
+
+        if (validTypes == null || validTypes.Count == 0)
+        {
+            Debug.LogError("No valid attacker types available for spawning.");
+            return new List<AttackerTypeDefinition>();
+        }
+
+        if (totalSpawns <= 0)
+        {
+            return new List<AttackerTypeDefinition>();
+        }
+
+        List<AttackerTypeDefinition> queue = new List<AttackerTypeDefinition>(totalSpawns);
+
+        // Guarantee each type appears at least once when there are enough spawn slots
+        if (totalSpawns >= validTypes.Count)
+        {
+            List<AttackerTypeDefinition> sortedByWeight = validTypes
+                .OrderByDescending(type => type.SpawnWeight)
+                .ToList();
+
+            for (int i = 0; i < validTypes.Count && queue.Count < totalSpawns; i++)
+            {
+                queue.Add(sortedByWeight[i]);
+            }
+        }
+
+        while (queue.Count < totalSpawns)
+        {
+            AttackerTypeDefinition nextType = SelectWeightedType(validTypes);
+            if (nextType == null)
+            {
+                break;
+            }
+
+            queue.Add(nextType);
+        }
+
+        ShuffleList(queue);
+        return queue;
+    }
+
+    List<AttackerTypeDefinition> GetValidAttackerTypes()
+    {
+        if (attackerTypes == null)
+        {
+            return new List<AttackerTypeDefinition>();
+        }
+
+        return attackerTypes
+            .Where(type => type != null && type.Prefab != null)
+            .ToList();
+    }
+
+    AttackerTypeDefinition SelectWeightedType(List<AttackerTypeDefinition> candidates)
+    {
+        if (candidates == null || candidates.Count == 0)
+        {
+            return null;
+        }
+
+        if (candidates.Count == 1)
+        {
+            return candidates[0];
+        }
+
+        float totalWeight = candidates.Sum(type => type.SpawnWeight);
+        float roll = Random.Range(0f, totalWeight);
+        float cumulative = 0f;
+
+        foreach (AttackerTypeDefinition type in candidates)
+        {
+            cumulative += type.SpawnWeight;
+            if (roll <= cumulative)
+            {
+                return type;
+            }
+        }
+
+        return candidates[candidates.Count - 1];
+    }
+
+    void ShuffleList<T>(List<T> list)
+    {
+        for (int i = list.Count - 1; i > 0; i--)
+        {
+            int swapIndex = Random.Range(0, i + 1);
+            T temp = list[i];
+            list[i] = list[swapIndex];
+            list[swapIndex] = temp;
+        }
+    }
+
+    int GetEnemyHealthForWave(AttackerTypeDefinition attackerType)
+    {
+        int baseHealth = attackerType != null ? attackerType.BaseHealth : 100;
+        return Mathf.RoundToInt(baseHealth * Mathf.Pow(waveHealthMultiplier, currentWave - 1));
     }
 
     void CleanupDeadEnemies()
     {
         activeEnemies.RemoveAll(enemy => enemy == null);
+        enemiesAlive = activeEnemies.Count;
     }
 
     public void OnEnemyKilled(AttackerController enemy)
     {
         money += killReward;
         activeEnemies.Remove(enemy);
-        Debug.Log($"Enemy killed! Money earned: ${killReward}, Total money: ${money}, Enemies remaining: {activeEnemies.Count}");
+        CleanupDeadEnemies();
+        UpdateUI();
+        Debug.Log($"Enemy killed! +${killReward}, Money: ${money}, Alive: {enemiesAlive}, ToSpawn: {enemiesRemaining}");
 
-        // Check if wave is complete
-        if (activeEnemies.Count == 0 && enemiesRemaining <= 0 && currentPhase == GamePhase.Combat)
-        {
-            Debug.Log("Wave completed via enemy killed - transitioning to preparation");
-        }
+        CheckWaveCompletion("enemy killed");
     }
 
     public void OnEnemyReachedEnd(AttackerController enemy)
     {
-        health -= healthLossPerEnemy;
+        int damageToPlayer = enemy != null ? Mathf.Max(0, enemy.DamageToPlayer) : healthLossPerEnemy;
+        health -= damageToPlayer;
         activeEnemies.Remove(enemy);
-        Debug.Log($"Enemy reached end! Health lost: {healthLossPerEnemy}, Remaining health: {health}, Enemies remaining: {activeEnemies.Count}");
+        CleanupDeadEnemies();
+        UpdateUI();
+        Debug.Log($"Enemy reached end! Health lost: {damageToPlayer}, Health: {health}, Alive: {enemiesAlive}, ToSpawn: {enemiesRemaining}");
 
-        // Check if wave is complete
-        if (activeEnemies.Count == 0 && enemiesRemaining <= 0 && currentPhase == GamePhase.Combat)
+        CheckGameOverCondition("enemy reached end");
+        if (currentPhase == GamePhase.GameOver)
         {
-            Debug.Log("Wave completed via enemy reached end - transitioning to preparation");
+            return;
         }
+
+        CheckWaveCompletion("enemy reached end");
+    }
+
+    void CheckGameOverCondition(string source)
+    {
+        if (currentPhase == GamePhase.GameOver || health > 0)
+        {
+            return;
+        }
+
+        if (debugMode)
+        {
+            Debug.Log($"Player health reached 0 during {source}, triggering game over.");
+        }
+
+        GameOver();
+    }
+
+    void CheckWaveCompletion(string source)
+    {
+        if (currentPhase == GamePhase.GameOver)
+        {
+            return;
+        }
+
+        if (currentPhase != GamePhase.Combat)
+        {
+            return;
+        }
+
+        // Ensure any null references are cleaned up before counting
+        CleanupDeadEnemies();
+
+        if (enemiesAlive > 0 || enemiesRemaining > 0)
+        {
+            if (debugMode)
+            {
+                Debug.Log($"[CheckWaveCompletion] Waiting ({source}) - Alive: {enemiesAlive}, ToSpawn: {enemiesRemaining}");
+            }
+            return;
+        }
+
+        Debug.Log($"Wave {currentWave} completed via {source}. Starting preparation for wave {currentWave + 1}.");
+
+        currentWave++;
+        StartPreparationPhase();
     }
 
     void GameOver()
     {
+        if (currentPhase == GamePhase.GameOver)
+        {
+            return;
+        }
+
         currentPhase = GamePhase.GameOver;
-        SceneManager.LoadScene("End Menu");
+        StopAllCoroutines();
+        activeEnemies.Clear();
+        enemiesAlive = 0;
+        enemiesRemaining = 0;
+
+        // Reset time scale before transitioning to the end scene
+        float defaultTimeScale = (timeScaleOptions != null && timeScaleOptions.Count > 0)
+            ? Mathf.Max(0f, timeScaleOptions[0])
+            : 1f;
+        Time.timeScale = defaultTimeScale > 0f ? defaultTimeScale : 1f;
+
+        const string endSceneName = "End Menu";
+
+        if (debugMode)
+        {
+            Debug.Log($"Loading '{endSceneName}' asynchronously...");
+        }
+
+        AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(endSceneName, LoadSceneMode.Single);
+        if (asyncLoad == null)
+        {
+            Debug.LogError($"Failed to initiate async load for '{endSceneName}'. Ensure the scene is added to build settings.");
+        }
     }
 
     void UpdateUI()
@@ -719,6 +993,11 @@ public class GameController : MonoBehaviour
         if (moneyText != null)
         {
             moneyText.text = "$" + money.ToString();
+        }
+
+        if (playerHealthText != null)
+        {
+            playerHealthText.text = "Health " + Mathf.Max(0, health).ToString();
         }
 
         if (timerText != null)

@@ -3,21 +3,26 @@ using System.Collections.Generic;
 
 public class AttackerController : MonoBehaviour
 {
-    [Header("Enemy Settings")]
-    [SerializeField] private int maxHealth = 100;
-    [SerializeField] private float moveSpeed = 3f;
-    [SerializeField] private float towerDamage = 20f;
-    [SerializeField] private float attackRange = 1.5f;
-    [SerializeField] private float attackRate = 1f; // Attacks per second
-
     [Header("Visual")]
     [SerializeField] private GameObject healthBarPrefab;
-    [SerializeField] private Transform healthBarParent;
+    private const int DefaultMaxHealth = 100;
+    private const float DefaultMoveSpeed = 3f;
+    private const float DefaultTowerDamage = 20f;
+    private const float DefaultAttackRange = 1.5f;
+    private const float DefaultAttackRate = 1f;
+    private const int DefaultDamageToPlayer = 10;
 
     // Health and combat
+    private int maxHealth = DefaultMaxHealth;
     private int currentHealth;
     private bool isAlive = true;
     private float lastAttackTime;
+    private int damageToPlayer = DefaultDamageToPlayer;
+    private string attackerTypeId = "Default";
+    private float moveSpeed = DefaultMoveSpeed;
+    private float towerDamage = DefaultTowerDamage;
+    private float attackRange = DefaultAttackRange;
+    private float attackRate = DefaultAttackRate;
 
     // Pathfinding
     private List<Vector3> availablePaths;
@@ -39,6 +44,10 @@ public class AttackerController : MonoBehaviour
     void Start()
     {
         currentHealth = maxHealth;
+        if (damageToPlayer <= 0)
+        {
+            damageToPlayer = Mathf.Max(1, DefaultDamageToPlayer);
+        }
         CreateHealthBar();
         Debug.Log($"Enemy {gameObject.name} Start() called at {transform.position}");
     }
@@ -48,24 +57,21 @@ public class AttackerController : MonoBehaviour
         Debug.Log($"Enemy {gameObject.name} is being destroyed at {transform.position}");
     }
 
-    public void Initialize(int health, List<Vector3> pathPoints)
+    public void Initialize(int health, List<Vector3> pathPoints, Vector3 startPosition, AttackerTypeDefinition typeDefinition)
     {
-        Initialize(health, pathPoints, transform.position);
-    }
+        ApplyTypeDefinition(typeDefinition);
 
-    public void Initialize(int health, List<Vector3> pathPoints, Vector3 startPosition)
-    {
         maxHealth = health;
         currentHealth = health;
-        availablePaths = pathPoints;
+        availablePaths = pathPoints ?? new List<Vector3>();
 
         // Ensure enemy starts exactly on a black tile
         transform.position = startPosition;
 
-        Debug.Log($"Enemy {gameObject.name} initialized with {health} health at {startPosition}, {pathPoints.Count} path points available");
+        Debug.Log($"Enemy {gameObject.name} initialized as {attackerTypeId} with {health} health at {startPosition}, {availablePaths.Count} path points available");
 
         // Check if we have a complete path or just scattered points
-        if (pathPoints.Count > 1 && ArePointsConnected(pathPoints))
+        if (availablePaths.Count > 1 && ArePointsConnected(availablePaths))
         {
             // Use the provided path directly
             CreateDirectPath();
@@ -318,6 +324,27 @@ public class AttackerController : MonoBehaviour
         }
     }
 
+    void ApplyTypeDefinition(AttackerTypeDefinition typeDefinition)
+    {
+        if (typeDefinition == null)
+        {
+            moveSpeed = DefaultMoveSpeed;
+            towerDamage = DefaultTowerDamage;
+            attackRange = DefaultAttackRange;
+            attackRate = DefaultAttackRate;
+            damageToPlayer = Mathf.Max(1, DefaultDamageToPlayer);
+            attackerTypeId = "Default";
+            return;
+        }
+
+        moveSpeed = typeDefinition.MoveSpeed;
+        towerDamage = typeDefinition.TowerDamage;
+        attackRange = typeDefinition.AttackRange;
+        attackRate = typeDefinition.AttackRate;
+        damageToPlayer = Mathf.Max(1, typeDefinition.DamageToPlayer);
+        attackerTypeId = typeDefinition.Id;
+    }
+
     void CheckForTowersToAttack()
     {
         // If already attacking a tower and it's still in range, continue
@@ -509,6 +536,9 @@ public class AttackerController : MonoBehaviour
         // Destroy the enemy
         Destroy(gameObject);
     }
+
+    public int DamageToPlayer => damageToPlayer;
+    public string AttackerTypeId => attackerTypeId;
 
     void CreateHealthBar()
     {

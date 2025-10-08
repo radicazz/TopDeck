@@ -1,3 +1,3 @@
 # TopDeck
 
-A tower Defense Classic.
+A Tower Defense classic...
