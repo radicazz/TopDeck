@@ -46,13 +46,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7b6815836e3a3ec489e8767b13a71616, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHealth: 20
-  moveSpeed: 3
-  towerDamage: 20
-  attackRange: 1.5
-  attackRate: 1
   healthBarPrefab: {fileID: 0}
-  healthBarParent: {fileID: 0}
 --- !u!135 &2328367383408143883
 SphereCollider:
   m_ObjectHideFlags: 0
