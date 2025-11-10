@@ -68,7 +68,7 @@ When asked to implement Part 3 items (see `REQUIRMENTS.md`):
 
 ### Example: `write_script` payload (creates a new MonoBehaviour)
 
-Use `write_script` with a path under `Assets/Scripts/...` and content that follows our C# standards. Filename and class name must match. Namespaces mirror the folder path under `Assets/Scripts/`.
+Use `write_script` with a path under `Assets/Scripts/...` and content that follows this repo’s C# style. Filename and class name must match. This project does not use namespaces in scripts.
 
 Request body (representative):
 
@@ -85,57 +85,49 @@ TowerUpgrade.cs:
 ```
 using UnityEngine;
 
-namespace TopDeck.Upgrades
+/// <summary>
+/// Applies incremental health and visual upgrades to a tower.
+/// Levels and effects are serialized for tuning in the Inspector.
+/// </summary>
+public class TowerUpgrade : MonoBehaviour
 {
-    /// <summary>
-    /// Applies incremental health and visual upgrades to a tower.
-    /// Levels and effects are serialized for tuning in the Inspector.
-    /// </summary>
-    public class TowerUpgrade : MonoBehaviour
+    [Header("Upgrade Settings")]
+    [SerializeField] private int level = 0;
+    [SerializeField] private int maxLevel = 2;
+    [SerializeField] private int healthBonusPerLevel = 25;
+
+    [Header("Visuals")] 
+    [SerializeField] private Renderer rendererRef;
+    [SerializeField] private Material upgradedMaterial;
+
+    public int Level => level;
+    public bool CanUpgrade => level < maxLevel;
+
+    public void ApplyUpgrade()
     {
-        [Header("Upgrade Settings")]
-        [SerializeField] private int _level = 0;
-        [SerializeField] private int _maxLevel = 2;
-        [SerializeField] private int _healthBonusPerLevel = 25;
+        if (!CanUpgrade) return;
+        level++;
 
-        [Header("Visuals")] 
-        [SerializeField] private Renderer _rendererRef;
-        [SerializeField] private Material _upgradedMaterial;
-
-        /// <summary>Current upgrade level.</summary>
-        public int Level => _level;
-        /// <summary>True when another upgrade can be applied.</summary>
-        public bool CanUpgrade => _level < _maxLevel;
-
-        /// <summary>Apply one upgrade step: increases health and updates visuals.</summary>
-        public void ApplyUpgrade()
+        var health = GetComponent<SimpleHealth>();
+        if (health != null)
         {
-            if (!CanUpgrade) return;
-            _level++;
-
-            var health = GetComponent<Health>();
-            if (health != null)
-            {
-                health.MaxHealth += _healthBonusPerLevel;
-                health.CurrentHealth = Mathf.Min(health.CurrentHealth + _healthBonusPerLevel, health.MaxHealth);
-            }
-
-            UpdateVisuals();
+            health.SetMaxHealth(health.MaxHealth + healthBonusPerLevel, true);
         }
 
-        /// <summary>Updates materials or other effects to reflect the current level.</summary>
-        private void UpdateVisuals()
+        UpdateVisuals();
+    }
+
+    void UpdateVisuals()
+    {
+        if (rendererRef != null && upgradedMaterial != null)
         {
-            if (_rendererRef != null && _upgradedMaterial != null)
-            {
-                _rendererRef.sharedMaterial = _upgradedMaterial;
-            }
+            rendererRef.sharedMaterial = upgradedMaterial;
         }
     }
 }
 ```
 
 Notes:
-- 4-space indent, Allman braces; private fields use `_camelCase`.
+- 4-space indent, Allman braces; private fields use `camelCase` (matches current scripts).
 - Place scripts under `Assets/Scripts/...`; Unity will generate `.meta` files automatically.
-- Keep the class name identical to the filename and align the namespace to the folder path.
+- Keep the class name identical to the filename. This project does not use namespaces.

@@ -116,7 +116,13 @@ public class GameController : MonoBehaviour
     void InitializeGame()
     {
         money = startingMoney;
-        health = startingHealth;
+        // Apply tower health bonus from upgrades, if present
+        int towerBonus = 0;
+        if (UpgradeManager.Instance != null)
+        {
+            towerBonus = UpgradeManager.Instance.GetTowerHealthBonus();
+        }
+        health = startingHealth + Mathf.Max(0, towerBonus);
         currentPhase = GamePhase.Preparation;
         timer = prepTime;
 
@@ -711,6 +717,10 @@ public class GameController : MonoBehaviour
                 string typeLabel = attackerType.Id;
                 Debug.Log($"Spawning enemy {i + 1}/{enemiesToSpawn} ({typeLabel}) at path {pathIndex} position: {exactSpawnPoint}");
 
+                // Create a procedural variant of this attacker type (stats + tint)
+                int defLevel = UpgradeManager.Instance != null ? UpgradeManager.Instance.GetDefenderLevel() : 0;
+                var variant = EnemyVariantGenerator.CreateVariant(attackerType, currentWave, defLevel);
+
                 GameObject enemy = Instantiate(prefabToSpawn, exactSpawnPoint, Quaternion.identity);
 
                 if (enemy == null)
@@ -722,14 +732,14 @@ public class GameController : MonoBehaviour
                 AttackerController attacker = enemy.GetComponent<AttackerController>();
                 if (attacker != null)
                 {
-                    int enemyHealth = GetEnemyHealthForWave(attackerType);
+                    int enemyHealth = GetEnemyHealthForWave(variant.type);
 
                     // Get the specific path for this enemy to follow
                     List<Vector3> enemyPath = mapController.GetPathByIndex(pathIndex);
 
                     if (enemyPath.Count > 0)
                     {
-                        attacker.Initialize(enemyHealth, enemyPath, exactSpawnPoint, attackerType);
+                        attacker.Initialize(enemyHealth, enemyPath, exactSpawnPoint, variant.type);
                         activeEnemies.Add(attacker);
                         enemiesAlive = activeEnemies.Count;
                         spawnedCount++;
@@ -738,11 +748,19 @@ public class GameController : MonoBehaviour
                     else
                     {
                         Debug.LogError($"No path found for index {pathIndex}, using all black tiles");
-                        attacker.Initialize(enemyHealth, pathPoints, exactSpawnPoint, attackerType);
+                        attacker.Initialize(enemyHealth, pathPoints, exactSpawnPoint, variant.type);
                         activeEnemies.Add(attacker);
                         enemiesAlive = activeEnemies.Count;
                         spawnedCount++;
                     }
+
+                    // Apply visual variant tint
+                    var appearance = enemy.GetComponent<EnemyVariantAppearance>();
+                    if (appearance == null)
+                    {
+                        appearance = enemy.AddComponent<EnemyVariantAppearance>();
+                    }
+                    appearance.Initialize(variant.tint);
                 }
                 else
                 {
