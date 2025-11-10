@@ -12,6 +12,7 @@
   - MCP tools are built into the Unity project and accessible to agents; do not run a separate Node server.
   - Use the MCP tools exposed by the CLI; no additional setup docs are required.
   - Any Node entry points (e.g., `index.js`) are not used for manual runtime.
+  - Unity auto-reads `UNITY_MCP_HOST` / `MCP_SERVER_URL` to aim the plugin at the CLI proxy (see `Assets/Editor/McpHostBootstrap.cs`). If unset, the plugin stays idle so the editor will not spam localhost.
 
 ## Build, Test, and Development Commands
 - Unity Editor: open with Unity Hub `6.2.10f1`.
@@ -72,6 +73,7 @@ If validation fails, **DO NOT** proceed or commit. Fix all errors first.
 ## Gameplay Requirements
 - Core, code-focused Part 3 requirements are summarized in `REQUIRMENTS.md` (weights, deliverables).
 - `IMPLEMENTATION.md` tracks what is already done vs. outstanding. Read it before starting new work to avoid duplicate effort.
+- `QUEUE.md` lists the current ready-to-pick tasks; check there before starting new work and update it when claiming/completing items.
 
 ## Coding Style & Naming Conventions
 - C#

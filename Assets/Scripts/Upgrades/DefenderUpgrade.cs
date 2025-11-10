@@ -22,11 +22,17 @@ public class DefenderUpgrade : MonoBehaviour
     void Awake()
     {
         defense = GetComponent<DefenseController>();
+        EnsureRendererReference();
     }
 
     void Start()
     {
         ApplyUpgradesIfNeeded();
+    }
+
+    void OnValidate()
+    {
+        EnsureRendererReference();
     }
 
     void Update()
@@ -74,6 +80,16 @@ public class DefenderUpgrade : MonoBehaviour
         {
             rendererRef.sharedMaterial = upgradedMaterial;
         }
+    }
+
+    void EnsureRendererReference()
+    {
+        if (rendererRef != null)
+        {
+            return;
+        }
+
+        rendererRef = GetComponentInChildren<Renderer>(includeInactive: true);
     }
 
     void ApplyToDefenseController(float damageMultiplier, float fireRateMultiplier)

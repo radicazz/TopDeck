@@ -40,6 +40,10 @@ public class GameController : MonoBehaviour
     [SerializeField] private List<float> timeScaleOptions = new List<float> { 1f, 2f };
     [SerializeField] private KeyCode timeScaleToggleKey = KeyCode.Space;
 
+    [Header("Procedural System")]
+    [SerializeField] private ProceduralVariantConfig variantConfig;
+    [SerializeField] private VariantTelemetryPresenter variantTelemetry;
+
     // Game State
     public enum GamePhase { Preparation, Combat, GameOver }
     public GamePhase currentPhase;
@@ -95,6 +99,11 @@ public class GameController : MonoBehaviour
         if (mapController == null)
         {
             Debug.LogError("MapController not found!");
+        }
+
+        if (variantConfig != null)
+        {
+            EnemyVariantGenerator.SetConfig(variantConfig);
         }
 
         InitializeGame();
@@ -598,50 +607,47 @@ public class GameController : MonoBehaviour
     {
         if (debugMode) Debug.Log($"[PlaceTower] Called with position: {position}, targetTile: {(targetTile ? targetTile.name : "null")}");
 
-        if (money >= towerCost)
+        if (!TrySpendMoney(towerCost))
         {
-            // Snap to grid at ground level (ignore the hit point's Y coordinate)
-            Vector3 snapPosition = new Vector3(
-                Mathf.Round(position.x / mapController.cellSize) * mapController.cellSize,
-                0.5f, // Use fixed ground level instead of position.y
-                Mathf.Round(position.z / mapController.cellSize) * mapController.cellSize
-            );
+            Debug.Log($"Not enough money to place tower! Need: ${towerCost}, Have: ${money}");
+            return;
+        }
 
-            if (debugMode) Debug.Log($"[PlaceTower] Snap position calculated: {snapPosition} (from original: {position}) with cellSize: {mapController.cellSize}");
+        // Snap to grid at ground level (ignore the hit point's Y coordinate)
+        Vector3 snapPosition = new Vector3(
+            Mathf.Round(position.x / mapController.cellSize) * mapController.cellSize,
+            0.5f, // Use fixed ground level instead of position.y
+            Mathf.Round(position.z / mapController.cellSize) * mapController.cellSize
+        );
 
-            money -= towerCost;
-            GameObject tower = Instantiate(defenderPrefab, snapPosition, Quaternion.identity);
-            Debug.Log($"Tower placed at {snapPosition}, Money remaining: ${money}");
+        if (debugMode) Debug.Log($"[PlaceTower] Snap position calculated: {snapPosition} (from original: {position}) with cellSize: {mapController.cellSize}");
 
-            if (tower == null)
-            {
-                Debug.LogError("Failed to instantiate tower! Check if defenderPrefab is assigned.");
-            }
-            else
-            {
-                if (debugMode) Debug.Log($"[PlaceTower] Tower instantiated successfully: {tower.name} at {tower.transform.position}");
+        GameObject tower = Instantiate(defenderPrefab, snapPosition, Quaternion.identity);
+        Debug.Log($"Tower placed at {snapPosition}, Money remaining: ${money}");
 
-                // Tag the tower and set layer to avoid interfering with tile detection
-                if (!tower.CompareTag("Tower"))
-                {
-                    tower.tag = "Tower";
-                    if (debugMode) Debug.Log($"[PlaceTower] Tagged tower as 'Tower'");
-                }
-
-                if (tower.GetComponent<Collider>())
-                {
-                    tower.layer = LayerMask.NameToLayer("Default"); // Or create a "Tower" layer
-                    if (debugMode) Debug.Log($"[PlaceTower] Set tower layer to avoid tile detection interference");
-                }
-            }
-
-            ClearHighlight();
-            UpdateUI();
+        if (tower == null)
+        {
+            Debug.LogError("Failed to instantiate tower! Check if defenderPrefab is assigned.");
         }
         else
         {
-            Debug.Log($"Not enough money to place tower! Need: ${towerCost}, Have: ${money}");
+            if (debugMode) Debug.Log($"[PlaceTower] Tower instantiated successfully: {tower.name} at {tower.transform.position}");
+
+            // Tag the tower and set layer to avoid interfering with tile detection
+            if (!tower.CompareTag("Tower"))
+            {
+                tower.tag = "Tower";
+                if (debugMode) Debug.Log($"[PlaceTower] Tagged tower as 'Tower'");
+            }
+
+            if (tower.GetComponent<Collider>())
+            {
+                tower.layer = LayerMask.NameToLayer("Default"); // Or create a "Tower" layer
+                if (debugMode) Debug.Log($"[PlaceTower] Set tower layer to avoid tile detection interference");
+            }
         }
+
+        ClearHighlight();
     }
 
     void StartPreparationPhase()
@@ -693,6 +699,9 @@ public class GameController : MonoBehaviour
         }
 
         int spawnedCount = 0;
+        float totalHealthMult = 0f;
+        float totalSpeedMult = 0f;
+        float totalDamageMult = 0f;
 
         for (int i = 0; i < spawnQueue.Count; i++)
         {
@@ -721,6 +730,10 @@ public class GameController : MonoBehaviour
                 int defLevel = UpgradeManager.Instance != null ? UpgradeManager.Instance.GetDefenderLevel() : 0;
                 var variant = EnemyVariantGenerator.CreateVariant(attackerType, currentWave, defLevel);
 
+                totalHealthMult += variant.healthMultiplier;
+                totalSpeedMult += variant.speedMultiplier;
+                totalDamageMult += variant.damageMultiplier;
+
                 GameObject enemy = Instantiate(prefabToSpawn, exactSpawnPoint, Quaternion.identity);
 
                 if (enemy == null)
@@ -732,14 +745,14 @@ public class GameController : MonoBehaviour
                 AttackerController attacker = enemy.GetComponent<AttackerController>();
                 if (attacker != null)
                 {
-                    int enemyHealth = GetEnemyHealthForWave(variant.type);
+                    int enemyHealth = GetEnemyHealthForWave(variant.definition);
 
                     // Get the specific path for this enemy to follow
                     List<Vector3> enemyPath = mapController.GetPathByIndex(pathIndex);
 
                     if (enemyPath.Count > 0)
                     {
-                        attacker.Initialize(enemyHealth, enemyPath, exactSpawnPoint, variant.type);
+                        attacker.Initialize(enemyHealth, enemyPath, exactSpawnPoint, variant.definition);
                         activeEnemies.Add(attacker);
                         enemiesAlive = activeEnemies.Count;
                         spawnedCount++;
@@ -748,7 +761,7 @@ public class GameController : MonoBehaviour
                     else
                     {
                         Debug.LogError($"No path found for index {pathIndex}, using all black tiles");
-                        attacker.Initialize(enemyHealth, pathPoints, exactSpawnPoint, variant.type);
+                        attacker.Initialize(enemyHealth, pathPoints, exactSpawnPoint, variant.definition);
                         activeEnemies.Add(attacker);
                         enemiesAlive = activeEnemies.Count;
                         spawnedCount++;
@@ -781,6 +794,14 @@ public class GameController : MonoBehaviour
         }
 
         Debug.Log($"Finished spawning enemies. Spawned: {spawnedCount}, To spawn remaining: {enemiesRemaining}, Active enemies: {activeEnemies.Count}");
+
+        if (spawnedCount > 0 && variantTelemetry != null)
+        {
+            float avgHealth = totalHealthMult / spawnedCount;
+            float avgSpeed = totalSpeedMult / spawnedCount;
+            float avgDamage = totalDamageMult / spawnedCount;
+            variantTelemetry.ShowVariantStats(currentWave, avgHealth, avgSpeed, avgDamage);
+        }
 
         CheckWaveCompletion("spawn complete");
     }
@@ -920,6 +941,40 @@ public class GameController : MonoBehaviour
         }
 
         CheckWaveCompletion("enemy reached end");
+    }
+
+    public bool TrySpendMoney(int amount)
+    {
+        if (amount <= 0)
+        {
+            return true;
+        }
+
+        if (money < amount)
+        {
+            return false;
+        }
+
+        money -= amount;
+        UpdateUI();
+        return true;
+    }
+
+    public void AddMoney(int amount)
+    {
+        if (amount == 0)
+        {
+            return;
+        }
+
+        money = Mathf.Max(0, money + amount);
+        UpdateUI();
+    }
+
+    public int GetTowerMaxHealth()
+    {
+        int bonus = UpgradeManager.Instance != null ? UpgradeManager.Instance.GetTowerHealthBonus() : 0;
+        return startingHealth + Mathf.Max(0, bonus);
     }
 
     void CheckGameOverCondition(string source)

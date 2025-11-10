@@ -38,6 +38,11 @@ public class UpgradeManager : MonoBehaviour
         return Mathf.Clamp(defenderLevel, 0, defenderMaxLevel);
     }
 
+    public int GetDefenderMaxLevel()
+    {
+        return Mathf.Max(1, defenderMaxLevel);
+    }
+
     public bool CanUpgradeDefender()
     {
         return defenderLevel < defenderMaxLevel;
@@ -54,6 +59,11 @@ public class UpgradeManager : MonoBehaviour
     public int GetTowerLevel()
     {
         return Mathf.Clamp(towerLevel, 0, towerMaxLevel);
+    }
+
+    public int GetTowerMaxLevel()
+    {
+        return Mathf.Max(1, towerMaxLevel);
     }
 
     public bool CanUpgradeTower()
@@ -90,4 +100,3 @@ public class UpgradeManager : MonoBehaviour
         return GetTowerLevel() * Mathf.Max(0, towerHealthBonusPerLevel);
     }
 }
-
