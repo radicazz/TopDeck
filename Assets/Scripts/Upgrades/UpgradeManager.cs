@@ -32,6 +32,14 @@ public class UpgradeManager : MonoBehaviour
         }
     }
 
+    void OnDestroy()
+    {
+        if (Instance == this)
+        {
+            Instance = null;
+        }
+    }
+
     // Public API
     public int GetDefenderLevel()
     {
@@ -95,8 +103,13 @@ public class UpgradeManager : MonoBehaviour
         return 1f + GetDefenderLevel() * Mathf.Max(0f, defenderFireRateMultiplierPerLevel);
     }
 
+    public int GetTowerHealthBonusPerLevel()
+    {
+        return Mathf.Max(0, towerHealthBonusPerLevel);
+    }
+
     public int GetTowerHealthBonus()
     {
-        return GetTowerLevel() * Mathf.Max(0, towerHealthBonusPerLevel);
+        return GetTowerLevel() * GetTowerHealthBonusPerLevel();
     }
 }

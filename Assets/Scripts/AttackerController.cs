@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 
+[RequireComponent(typeof(EntityHealth))]
 public class AttackerController : MonoBehaviour
 {
     [Header("Visual")]
@@ -13,9 +14,9 @@ public class AttackerController : MonoBehaviour
     private const int DefaultDamageToPlayer = 10;
 
     // Health and combat
-    private int maxHealth = DefaultMaxHealth;
-    private int currentHealth;
-    private bool isAlive = true;
+    private EntityHealth entityHealth;
+    private HealthBarBinder healthBarBinder;
+    private bool deathHandled;
     private float lastAttackTime;
     private int damageToPlayer = DefaultDamageToPlayer;
     private string attackerTypeId = "Default";
@@ -38,31 +39,65 @@ public class AttackerController : MonoBehaviour
     private DefenseController targetTower;
     private bool isAttackingTower = false;
 
-    // UI
-    private GameObject healthBarInstance;
+    void Awake()
+    {
+        entityHealth = GetComponent<EntityHealth>();
+        if (entityHealth == null)
+        {
+            entityHealth = gameObject.AddComponent<EntityHealth>();
+            entityHealth.Initialize(DefaultMaxHealth);
+        }
+
+        entityHealth.OnDeath += Die;
+        entityHealth.OnRevive += ResetDeathFlag;
+
+        healthBarBinder = GetComponent<HealthBarBinder>();
+        if (healthBarBinder == null && healthBarPrefab != null)
+        {
+            healthBarBinder = gameObject.AddComponent<HealthBarBinder>();
+        }
+
+        if (healthBarBinder != null)
+        {
+            healthBarBinder.Bind(entityHealth);
+        }
+    }
 
     void Start()
     {
-        currentHealth = maxHealth;
         if (damageToPlayer <= 0)
         {
             damageToPlayer = Mathf.Max(1, DefaultDamageToPlayer);
         }
-        CreateHealthBar();
         Debug.Log($"Enemy {gameObject.name} Start() called at {transform.position}");
     }
 
     void OnDestroy()
     {
+        if (entityHealth != null)
+        {
+            entityHealth.OnDeath -= Die;
+            entityHealth.OnRevive -= ResetDeathFlag;
+        }
+
+        if (healthBarBinder != null)
+        {
+            healthBarBinder.Bind(null);
+        }
+
         Debug.Log($"Enemy {gameObject.name} is being destroyed at {transform.position}");
     }
 
     public void Initialize(int health, List<Vector3> pathPoints, Vector3 startPosition, AttackerTypeDefinition typeDefinition)
     {
         ApplyTypeDefinition(typeDefinition);
-
-        maxHealth = health;
-        currentHealth = health;
+        deathHandled = false;
+        hasReachedEnd = false;
+        if (entityHealth == null)
+        {
+            entityHealth = GetComponent<EntityHealth>();
+        }
+        entityHealth.Initialize(Mathf.Max(1, health));
         availablePaths = pathPoints ?? new List<Vector3>();
 
         // Ensure enemy starts exactly on a black tile
@@ -276,7 +311,7 @@ public class AttackerController : MonoBehaviour
 
     void Update()
     {
-        if (!isAlive || hasReachedEnd) return;
+        if (!IsAlive() || hasReachedEnd) return;
 
         // Safety check - if enemy has been alive for a few frames but has no path, create emergency path
         if ((currentPath == null || currentPath.Count == 0) && Time.time > 2f)
@@ -296,8 +331,6 @@ public class AttackerController : MonoBehaviour
         {
             AttackTower();
         }
-
-        UpdateHealthBar();
     }
 
     void CreateEmergencyPath()
@@ -509,60 +542,63 @@ public class AttackerController : MonoBehaviour
 
     public void TakeDamage(int damage)
     {
-        if (!isAlive) return;
-
-        currentHealth -= damage;
-        Debug.Log($"Enemy {gameObject.name} took {damage} damage, health: {currentHealth}/{maxHealth}");
-
-        if (currentHealth <= 0)
+        if (hasReachedEnd || entityHealth == null || !entityHealth.IsAlive)
         {
-            Die();
+            return;
         }
+
+        entityHealth.TakeDamage(damage);
+        Debug.Log($"Enemy {gameObject.name} took {damage} damage, health: {entityHealth.CurrentHealth}/{entityHealth.MaxHealth}");
     }
 
     void Die()
     {
-        isAlive = false;
+        if (deathHandled || hasReachedEnd)
+        {
+            return;
+        }
+
+        deathHandled = true;
         Debug.Log($"Enemy {gameObject.name} died!");
 
-        // Notify game controller
         if (GameController.Instance != null)
         {
             GameController.Instance.OnEnemyKilled(this);
         }
 
-        // Add death effects here if desired
-
-        // Destroy the enemy
         Destroy(gameObject);
+    }
+
+    void ResetDeathFlag()
+    {
+        deathHandled = false;
     }
 
     public int DamageToPlayer => damageToPlayer;
     public string AttackerTypeId => attackerTypeId;
 
-    void CreateHealthBar()
-    {
-        if (healthBarPrefab != null)
-        {
-            healthBarInstance = Instantiate(healthBarPrefab, transform);
-            healthBarInstance.transform.localPosition = Vector3.up * 2f; // Above the enemy
-        }
-    }
-
-    void UpdateHealthBar()
-    {
-        if (healthBarInstance != null)
-        {
-            // Update health bar UI - you'll need to implement this based on your health bar prefab
-            // Example: healthBarInstance.GetComponent<Slider>().value = (float)currentHealth / maxHealth;
-        }
-    }
-
     // Public methods for other scripts
-    public bool IsAlive() => isAlive;
+    public bool IsAlive()
+    {
+        if (hasReachedEnd)
+        {
+            return false;
+        }
+
+        return entityHealth != null && entityHealth.IsAlive && !deathHandled;
+    }
+
     public float GetPathProgress() => pathProgress;
-    public int GetCurrentHealth() => currentHealth;
-    public int GetMaxHealth() => maxHealth;
+
+    public int GetCurrentHealth()
+    {
+        return entityHealth != null ? entityHealth.CurrentHealth : 0;
+    }
+
+    public int GetMaxHealth()
+    {
+        return entityHealth != null ? entityHealth.MaxHealth : DefaultMaxHealth;
+    }
 
     // Visualization in Scene view
     void OnDrawGizmosSelected()

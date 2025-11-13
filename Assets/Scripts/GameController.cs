@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using UnityEngine.EventSystems;
 using TMPro;
 using System.Collections;
 using System.Collections.Generic;
@@ -9,11 +10,11 @@ using System.Linq;
 public class GameController : MonoBehaviour
 {
     [Header("Game Settings")]
-    [SerializeField] private int startingMoney = 1000;
+    [SerializeField] private int startingMoney = 2000;  // Increased to allow multiple towers
     [SerializeField] private int startingHealth = 100;
     [SerializeField] private int towerCost = 500;
     [SerializeField] private int killReward = 5;
-    [SerializeField] private float prepTime = 30f;
+    [SerializeField] private float prepTime = 10f;
     [SerializeField] private int healthLossPerEnemy = 10;
 
     [Header("UI References")]
@@ -21,9 +22,13 @@ public class GameController : MonoBehaviour
     [SerializeField] private TextMeshProUGUI moneyText;
     [SerializeField] private TextMeshProUGUI timerText;
     [SerializeField] private TextMeshProUGUI playerHealthText;
+    [SerializeField] private RectTransform[] pointerBlockingRects;
 
     [Header("Prefabs")]
     [SerializeField] private GameObject defenderPrefab;
+    [SerializeField] private GameObject normalAttackerPrefabOverride;
+    [SerializeField] private GameObject eliteAttackerPrefabOverride;
+    [SerializeField] private GameObject miniBossAttackerPrefabOverride;
 
     [Header("Attacker Types")]
     [SerializeField] private List<AttackerTypeDefinition> attackerTypes = new List<AttackerTypeDefinition>();
@@ -42,7 +47,10 @@ public class GameController : MonoBehaviour
 
     [Header("Procedural System")]
     [SerializeField] private ProceduralVariantConfig variantConfig;
-    [SerializeField] private VariantTelemetryPresenter variantTelemetry;
+
+    [Header("Adaptive Difficulty")]
+    [SerializeField] private AdaptiveWaveDifficulty adaptiveDifficulty = new AdaptiveWaveDifficulty();
+    [SerializeField] private AdaptiveWaveDifficultyConfig adaptiveDifficultyConfig;
 
     // Game State
     public enum GamePhase { Preparation, Combat, GameOver }
@@ -55,9 +63,17 @@ public class GameController : MonoBehaviour
     public int currentWave = 1;
     public int enemiesRemaining;
     private float timer;
-    private float lastTowerPlacementTime = 0f; // Cooldown for tower placement
     private int enemiesAlive = 0;
     private int currentTimeScaleIndex = 0;
+    private WaveTuning currentWaveTuning;
+    private List<SpawnInstruction> currentSpawnPlan = new List<SpawnInstruction>();
+    private float combatPhaseStartTime;
+    private int waveStartHealth;
+    private int enemiesSpawnedThisWave;
+    private int elitesSpawnedThisWave;
+    private int miniBossesSpawnedThisWave;
+    private DefenderUpgrade selectedDefender;
+    private bool hasActiveSelection;
 
     // Map References
     private MapController mapController;
@@ -84,11 +100,36 @@ public class GameController : MonoBehaviour
         {
             Destroy(gameObject);
         }
+
+        if (pointerBlockingRects != null)
+        {
+            var filtered = new List<RectTransform>();
+            foreach (var rect in pointerBlockingRects)
+            {
+                if (rect != null)
+                {
+                    filtered.Add(rect);
+                }
+            }
+
+            pointerBlockingRects = filtered.Count > 0 ? filtered.ToArray() : null;
+        }
+    }
+
+    public float GetPreparationTimer()
+    {
+        return timer;
+    }
+
+    public int GetEnemiesAlive()
+    {
+        return Mathf.Max(0, enemiesAlive);
     }
 
     void Start()
     {
         Debug.Log("GameController Start() called");
+        
         mainCamera = Camera.main;
         if (mainCamera == null)
         {
@@ -104,6 +145,11 @@ public class GameController : MonoBehaviour
         if (variantConfig != null)
         {
             EnemyVariantGenerator.SetConfig(variantConfig);
+        }
+
+        if (adaptiveDifficultyConfig != null && adaptiveDifficulty != null)
+        {
+            adaptiveDifficulty.ApplyConfig(adaptiveDifficultyConfig);
         }
 
         InitializeGame();
@@ -295,6 +341,11 @@ public class GameController : MonoBehaviour
                 break;
         }
 
+        if (hasActiveSelection && selectedDefender == null)
+        {
+            ClearTowerSelection();
+        }
+
         UpdateUI();
     }
 
@@ -350,20 +401,7 @@ public class GameController : MonoBehaviour
 
         // Handle tower placement
         HandleTowerPlacement();
-
-        // Auto-start combat if money reaches $0
-        if (money < towerCost)
-        {
-            Debug.Log($"Not enough money for towers (${money} < ${towerCost}), starting combat phase early");
-            StartCombatPhase();
-            return;
-        }
-
-        if (timer <= 0)
-        {
-            Debug.Log("Preparation time ended, starting combat phase");
-            StartCombatPhase();
-        }
+        if (timer <= 0f) { StartCombatPhase(); }
     }
 
     void HandleCombatPhase()
@@ -380,44 +418,74 @@ public class GameController : MonoBehaviour
         CheckWaveCompletion("combat phase");
     }
 
-    void HandleTowerPlacement()
+void HandleTowerPlacement()
     {
-        // ALWAYS show this debug when mouse is clicked (ignore debugMode setting)
-        if (Input.GetMouseButtonDown(0))
+        if (debugMode && Input.GetMouseButtonDown(0))
         {
-            Debug.Log($"[TOWER DEBUG] CLICK! Phase:{currentPhase} Money:${money} DebugMode:{debugMode} Timer:{timer:F1}");
+            Debug.Log("[HandleTowerPlacement] Left click detected");
+        }
+        
+        // Only block if actually clicking ON the upgrade panel, not just when it exists
+        if (IsPointerOverBlockingUI())
+        {
+            if (debugMode)
+            {
+                Debug.Log("[HandleTowerPlacement] Click blocked by UI");
+            }
+            return;
+        }
+
+        if (currentPhase != GamePhase.Preparation)
+        {
+            ClearHighlight();
+            return;
         }
 
         Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
-
-        // Strategy 1: Try to find tiles using RaycastAll (continue through towers)
         RaycastHit[] hits = Physics.RaycastAll(ray, Mathf.Infinity);
 
-        if (debugMode && Input.GetMouseButtonDown(0)) Debug.Log($"[TowerPlacement] Total hits: {hits.Length}");
+        if (Input.GetMouseButtonDown(1))
+        {
+            ClearTowerSelection();
+            return;
+        }
 
+        bool clicked = Input.GetMouseButtonDown(0);
+        bool attemptedPlacementThisClick = false;
+        DefenderUpgrade clickedDefender = null;
+        bool foundTower = false;
         GameObject hitTile = null;
         Vector3 hitPoint = Vector3.zero;
-        bool foundTower = false;
 
-        // Look for the ground tile in all hits, prioritizing tiles over towers
-        foreach (RaycastHit hit in hits)
+        foreach (var hit in hits)
         {
-            GameObject hitObject = hit.collider.gameObject;
-
-            if (debugMode) Debug.Log($"[TowerPlacement] Hit: {hitObject.name}, Tag: {hitObject.tag}, Position: {hit.point}");
-
-            // Check if this is a tower/defender
-            if (hitObject.name.Contains("Defender") || hitObject.GetComponent<DefenseController>() != null)
+            if (hit.collider == null)
             {
-                if (debugMode) Debug.Log($"[TowerPlacement] Hit tower object: {hitObject.name}");
-                foundTower = true;
-                continue; // Keep looking for tiles
+                continue;
             }
 
-            // More robust tile detection - look for objects that could be tiles
-            bool isTile = false;
+            GameObject hitObject = hit.collider.gameObject;
 
-            // Check by name patterns
+            if (hitObject.layer == LayerMask.NameToLayer("Ignore Raycast"))
+            {
+                continue;
+            }
+
+            DefenderUpgrade defender = hitObject.GetComponentInParent<DefenderUpgrade>();
+            if (defender != null && defender.isActiveAndEnabled)
+            {
+                foundTower = true;
+                if (clicked && clickedDefender == null)
+                {
+                    clickedDefender = defender;
+                    SelectTower(clickedDefender);
+                    ClearHighlight();
+                    return;
+                }
+                continue;
+            }
+
+            bool isTile = false;
             if (hitObject.name.ToLower().Contains("cube") ||
                 hitObject.name.ToLower().Contains("tile") ||
                 hitObject.name.ToLower().Contains("ground"))
@@ -425,13 +493,11 @@ public class GameController : MonoBehaviour
                 isTile = true;
             }
 
-            // Check by tags
             if (hitObject.CompareTag("WhiteTile") || hitObject.CompareTag("BlackTile"))
             {
                 isTile = true;
             }
 
-            // Check by renderer and reasonable height (more flexible than before)
             if (!isTile && hitObject.GetComponent<Renderer>() != null && hit.point.y <= 2f)
             {
                 isTile = true;
@@ -440,86 +506,114 @@ public class GameController : MonoBehaviour
             if (isTile)
             {
                 hitTile = hitObject;
-                hitPoint = hit.point;
-                if (debugMode) Debug.Log($"[TowerPlacement] Found valid tile: {hitObject.name} at {hit.point}");
-                break; // Found a tile, stop searching
+                hitPoint = hitTile.transform.position;
+                hitPoint.y = 0f;
+                break;
             }
         }
 
-        // Strategy 2: If no tile found and we hit a tower, try a different approach
         if (hitTile == null && foundTower)
         {
             if (debugMode) Debug.Log("[TowerPlacement] No tile found behind tower, trying alternative detection...");
-
-            // Try raycasting with a layer mask to ignore towers
-            int layerMask = ~LayerMask.GetMask("Default"); // Ignore default layer if towers are on it
+            int layerMask = ~LayerMask.GetMask("Default");
             RaycastHit altHit;
 
             if (Physics.Raycast(ray, out altHit, Mathf.Infinity, layerMask))
             {
                 GameObject altObject = altHit.collider.gameObject;
-                if (debugMode) Debug.Log($"[TowerPlacement] Alternative raycast hit: {altObject.name}");
-
-                // Check if this alternative hit is a tile
                 if (altObject.CompareTag("WhiteTile") || altObject.CompareTag("BlackTile") ||
                     altObject.name.ToLower().Contains("cube") || altObject.name.ToLower().Contains("tile"))
                 {
                     hitTile = altObject;
-                    hitPoint = altHit.point;
-                    if (debugMode) Debug.Log($"[TowerPlacement] Alternative method found tile: {altObject.name}");
+                    hitPoint = hitTile.transform.position;
+                    hitPoint.y = 0f;
                 }
             }
         }
 
-        // Strategy 3: If still no tile, try finding the nearest tile to the mouse position
         if (hitTile == null && foundTower)
         {
-            if (debugMode) Debug.Log("[TowerPlacement] Trying nearest tile detection...");
             hitTile = FindNearestTileToMouse();
             if (hitTile != null)
             {
-                // Project the tile position for hit point
                 hitPoint = hitTile.transform.position;
-                hitPoint.y = 0f; // Ground level
-                if (debugMode) Debug.Log($"[TowerPlacement] Found nearest tile: {hitTile.name} at {hitPoint}");
+                hitPoint.y = 0f;
             }
         }
 
-        // If we found a tile
         if (hitTile != null)
         {
-            // Only highlight and allow placement on non-black tiles
             if (!hitTile.CompareTag("BlackTile"))
             {
-                if (debugMode) Debug.Log($"[TowerPlacement] Highlighting tile: {hitTile.name}");
                 HighlightTile(hitTile);
 
-                // Place tower on click (with money and cooldown checks)
-                if (Input.GetMouseButtonDown(0))
+                // Allow placement if we clicked on a tile and didn't click on a tower
+                if (clicked && clickedDefender == null)
                 {
+                    attemptedPlacementThisClick = true;
                     PlaceTower(hitPoint, hitTile);
-
                 }
             }
             else
             {
-                if (debugMode) Debug.Log($"[TowerPlacement] Cannot place on black tile: {hitTile.name}");
                 ClearHighlight();
             }
         }
         else
         {
-            if (foundTower)
-            {
-                if (debugMode) Debug.Log("[TowerPlacement] Tile search blocked by tower - clearing highlight");
-            }
-            else
-            {
-                if (debugMode) Debug.Log("[TowerPlacement] No valid tile found");
-            }
             ClearHighlight();
         }
     }
+
+    bool IsPointerOverBlockingUI()
+    {
+        // First check: Is pointer over ANY UI element?
+        if (EventSystem.current == null || !EventSystem.current.IsPointerOverGameObject())
+        {
+            return false;
+        }
+
+        // Second check: Is it over a BLOCKING UI element (not just any UI)?
+        if (pointerBlockingRects == null || pointerBlockingRects.Length == 0)
+        {
+            return false;
+        }
+
+        Vector2 screenPoint = Input.mousePosition;
+
+        foreach (var rect in pointerBlockingRects)
+        {
+            if (rect == null)
+            {
+                continue;
+            }
+            
+            // Skip if the rect is not active (panel hidden)
+            if (!rect.gameObject.activeInHierarchy)
+            {
+                continue;
+            }
+
+            Canvas canvas = rect.GetComponentInParent<Canvas>();
+            Camera uiCamera = null;
+            if (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
+            {
+                uiCamera = canvas.worldCamera != null ? canvas.worldCamera : mainCamera;
+            }
+
+            if (RectTransformUtility.RectangleContainsScreenPoint(rect, screenPoint, uiCamera))
+            {
+                if (debugMode)
+                {
+                    Debug.Log($"[IsPointerOverBlockingUI] Pointer over {rect.gameObject.name}");
+                }
+                return true;
+            }
+        }
+
+        return false;
+    }
+
 
     GameObject FindNearestTileToMouse()
     {
@@ -550,42 +644,37 @@ public class GameController : MonoBehaviour
 
     void HighlightTile(GameObject tile)
     {
-        if (debugMode) Debug.Log($"[HighlightTile] Called for tile: {tile.name}");
-
-        if (highlightedTile != tile)
+        if (highlightedTile == tile)
         {
-            ClearHighlight();
-            highlightedTile = tile;
+            return; // Already highlighted, skip
+        }
 
-            // Add highlight effect (change material or add outline)
-            Renderer renderer = tile.GetComponent<Renderer>();
-            if (renderer != null)
+        ClearHighlight();
+        highlightedTile = tile;
+
+        // Add highlight effect (change material or add outline)
+        Renderer renderer = tile.GetComponent<Renderer>();
+        if (renderer != null)
+        {
+            // Create a copy of the material to avoid affecting all instances
+            if (renderer.material != null)
             {
-                // Create a copy of the material to avoid affecting all instances
-                if (renderer.material != null)
-                {
-                    // Store original color before changing it
-                    originalTileColor = renderer.material.color;
+                // Store original color before changing it
+                originalTileColor = renderer.material.color;
 
-                    // Create a material instance to avoid affecting other tiles
-                    Material highlightMaterial = new Material(renderer.material);
-                    highlightMaterial.color = Color.yellow;
-                    renderer.material = highlightMaterial;
+                // Red if can't afford, cyan if can afford
+                Color highlightColor = (money >= towerCost) ? Color.cyan : Color.red;
 
-                    if (debugMode) Debug.Log($"[HighlightTile] Applied highlight to {tile.name}, Original color: {originalTileColor}");
-                }
-            }
-            else
-            {
-                if (debugMode) Debug.LogWarning($"[HighlightTile] No renderer found on tile: {tile.name}");
+                // Create a material instance to avoid affecting other tiles
+                Material highlightMaterial = new Material(renderer.material);
+                highlightMaterial.color = highlightColor;
+                renderer.material = highlightMaterial;
             }
         }
     }
 
     void ClearHighlight()
     {
-        if (debugMode) Debug.Log($"[ClearHighlight] Called, current highlightedTile: {(highlightedTile ? highlightedTile.name : "null")}");
-
         if (highlightedTile != null)
         {
             // Reset material color to original
@@ -596,58 +685,86 @@ public class GameController : MonoBehaviour
                 Material originalMaterial = new Material(renderer.material);
                 originalMaterial.color = originalTileColor;
                 renderer.material = originalMaterial;
-
-                if (debugMode) Debug.Log($"[ClearHighlight] Restored color for tile: {highlightedTile.name} to {originalTileColor}");
             }
             highlightedTile = null;
         }
     }
 
-    void PlaceTower(Vector3 position, GameObject targetTile = null)
+void PlaceTower(Vector3 position, GameObject targetTile = null)
     {
-        if (debugMode) Debug.Log($"[PlaceTower] Called with position: {position}, targetTile: {(targetTile ? targetTile.name : "null")}");
+        Debug.Log($"[PlaceTower] Called with position: {position}, targetTile: {(targetTile ? targetTile.name : "null")}");
 
-        if (!TrySpendMoney(towerCost))
-        {
-            Debug.Log($"Not enough money to place tower! Need: ${towerCost}, Have: ${money}");
-            return;
-        }
-
-        // Snap to grid at ground level (ignore the hit point's Y coordinate)
         Vector3 snapPosition = new Vector3(
             Mathf.Round(position.x / mapController.cellSize) * mapController.cellSize,
-            0.5f, // Use fixed ground level instead of position.y
+            0.5f,
             Mathf.Round(position.z / mapController.cellSize) * mapController.cellSize
         );
 
-        if (debugMode) Debug.Log($"[PlaceTower] Snap position calculated: {snapPosition} (from original: {position}) with cellSize: {mapController.cellSize}");
+        Debug.Log($"[PlaceTower] Snap position: {snapPosition}, cellSize: {mapController.cellSize}");
+
+        if (IsTileOccupied(snapPosition))
+        {
+            Debug.Log("[PlaceTower] Cannot place tower: tile already occupied.");
+            return;
+        }
+
+        if (!TrySpendMoney(towerCost))
+        {
+            Debug.Log($"[PlaceTower] Not enough money! Need: ${towerCost}, Have: ${money}");
+            return;
+        }
 
         GameObject tower = Instantiate(defenderPrefab, snapPosition, Quaternion.identity);
-        Debug.Log($"Tower placed at {snapPosition}, Money remaining: ${money}");
+        Debug.Log($"[PlaceTower] Tower placed at {snapPosition}, Money remaining: ${money}");
 
         if (tower == null)
         {
-            Debug.LogError("Failed to instantiate tower! Check if defenderPrefab is assigned.");
+            Debug.LogError("[PlaceTower] Failed to instantiate tower!");
         }
         else
         {
-            if (debugMode) Debug.Log($"[PlaceTower] Tower instantiated successfully: {tower.name} at {tower.transform.position}");
+            Debug.Log($"[PlaceTower] Tower instantiated: {tower.name}");
 
-            // Tag the tower and set layer to avoid interfering with tile detection
             if (!tower.CompareTag("Tower"))
             {
                 tower.tag = "Tower";
-                if (debugMode) Debug.Log($"[PlaceTower] Tagged tower as 'Tower'");
             }
 
             if (tower.GetComponent<Collider>())
             {
-                tower.layer = LayerMask.NameToLayer("Default"); // Or create a "Tower" layer
-                if (debugMode) Debug.Log($"[PlaceTower] Set tower layer to avoid tile detection interference");
+                tower.layer = LayerMask.NameToLayer("Default");
+            }
+
+            var defenderUpgrade = tower.GetComponent<DefenderUpgrade>();
+            if (defenderUpgrade != null)
+            {
+                Debug.Log($"[PlaceTower] Auto-selecting placed tower");
+                SelectTower(defenderUpgrade);
             }
         }
 
         ClearHighlight();
+    }
+
+    bool IsTileOccupied(Vector3 tileCenter)
+    {
+        float radius = mapController != null ? Mathf.Max(0.45f, mapController.cellSize * 0.45f) : 0.5f;
+        Vector3 center = tileCenter + Vector3.up * 0.5f;
+        Collider[] overlaps = Physics.OverlapSphere(center, radius);
+        foreach (var col in overlaps)
+        {
+            if (col == null)
+            {
+                continue;
+            }
+
+            if (col.GetComponentInParent<DefenseController>() != null)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     void StartPreparationPhase()
@@ -657,7 +774,13 @@ public class GameController : MonoBehaviour
         CleanupDeadEnemies();
         enemiesAlive = Mathf.Max(0, enemiesAlive);
         enemiesRemaining = 0;
+        currentSpawnPlan.Clear();
+        combatPhaseStartTime = 0f;
+        enemiesSpawnedThisWave = 0;
+        elitesSpawnedThisWave = 0;
+        miniBossesSpawnedThisWave = 0;
         ClearHighlight();
+        ClearTowerSelection();
         Debug.Log($"Started preparation phase for wave {currentWave}");
     }
 
@@ -665,12 +788,130 @@ public class GameController : MonoBehaviour
     {
         currentPhase = GamePhase.Combat;
         CleanupDeadEnemies();
-        enemiesRemaining = GetEnemiesForWave();
+        PrepareWaveTuning();
+        enemiesRemaining = Mathf.Max(0, currentWaveTuning.EnemyCount);
         enemiesAlive = activeEnemies.Count;
         ClearHighlight();
 
-        Debug.Log($"Started combat phase - Wave {currentWave}, Enemies to spawn: {enemiesRemaining}, Alive: {enemiesAlive}, Health: {health}");
+        currentSpawnPlan = ProceduralSpawnPatternPlanner.BuildPattern(
+            currentWaveTuning.Pattern,
+            enemiesRemaining,
+            Mathf.Max(0.05f, currentWaveTuning.SpawnDelay),
+            spawnPoints.Count,
+            currentWaveTuning.EliteBudget,
+            currentWaveTuning.MiniBossBudget);
+
+        waveStartHealth = health;
+        combatPhaseStartTime = Time.time;
+        enemiesSpawnedThisWave = 0;
+        elitesSpawnedThisWave = 0;
+        miniBossesSpawnedThisWave = 0;
+        ClearTowerSelection();
+
+        Debug.Log($"Started combat phase - Wave {currentWave}, Pattern: {currentWaveTuning.Pattern}, Difficulty: {currentWaveTuning.DifficultyScore:F2}, Enemies to spawn: {enemiesRemaining}, Elite budget: {currentWaveTuning.EliteBudget}, MiniBoss budget: {currentWaveTuning.MiniBossBudget}");
         StartCoroutine(SpawnEnemies());
+    }
+
+void SelectTower(DefenderUpgrade defender)
+    {
+        if (defender == null)
+        {
+            Debug.Log($"[SelectTower] Cannot select: defender={defender}, phase={currentPhase}");
+            return;
+        }
+
+        if (selectedDefender == defender)
+        {
+            Debug.Log("[SelectTower] Already selected this tower");
+            return;
+        }
+
+        if (selectedDefender != null)
+        {
+            selectedDefender.SetSelected(false);
+        }
+
+        selectedDefender = defender;
+        selectedDefender.SetSelected(true);
+        hasActiveSelection = true;
+        
+        Debug.Log($"[SelectTower] Selected {defender.DisplayName}");
+        
+        // Show upgrade panel if available
+        var upgradePanel = FindFirstObjectByType<UpgradePanelUIDocument>();
+        if (upgradePanel != null)
+        {
+            upgradePanel.ShowPanel();
+        }
+    }
+
+    void ClearTowerSelection()
+    {
+        if (!hasActiveSelection && selectedDefender == null)
+        {
+            return;
+        }
+
+        if (selectedDefender != null)
+        {
+            selectedDefender.SetSelected(false);
+        }
+
+        selectedDefender = null;
+        hasActiveSelection = false;
+        
+        // Hide upgrade panel
+        var upgradePanel = FindFirstObjectByType<UpgradePanelUIDocument>();
+        if (upgradePanel != null)
+        {
+            upgradePanel.HidePanel();
+        }
+    }
+
+    public bool IsTowerSelected()
+    {
+        return selectedDefender != null && hasActiveSelection;
+    }
+
+    void PrepareWaveTuning()
+    {
+        int defenderLevel = UpgradeManager.Instance != null ? UpgradeManager.Instance.GetDefenderLevel() : 0;
+        int towerLevel = UpgradeManager.Instance != null ? UpgradeManager.Instance.GetTowerLevel() : 0;
+
+        if (adaptiveDifficulty != null)
+        {
+            currentWaveTuning = adaptiveDifficulty.Evaluate(currentWave, defenderLevel, towerLevel);
+        }
+        else
+        {
+            currentWaveTuning = new WaveTuning
+            {
+                EnemyCount = GetEnemiesForWave(),
+                SpawnDelay = enemySpawnDelay,
+                Pattern = SpawnPatternType.Alternating,
+                EliteBudget = 0,
+                MiniBossBudget = 0,
+                DifficultyScore = Mathf.Clamp01((currentWave - 1f) / 10f),
+                PatternAggression = 0.3f
+            };
+        }
+
+        if (currentWaveTuning.EnemyCount <= 0)
+        {
+            currentWaveTuning.EnemyCount = GetEnemiesForWave();
+        }
+
+        if (currentWaveTuning.SpawnDelay <= 0f)
+        {
+            currentWaveTuning.SpawnDelay = enemySpawnDelay;
+        }
+
+        if (currentWaveTuning.PatternAggression <= 0f)
+        {
+            currentWaveTuning.PatternAggression = Mathf.Clamp01((float)currentWave / 10f);
+        }
+
+        enemySpawnDelay = currentWaveTuning.SpawnDelay;
     }
 
     int GetEnemiesForWave()
@@ -698,6 +939,18 @@ public class GameController : MonoBehaviour
             yield break;
         }
 
+        List<SpawnInstruction> spawnPlan = currentSpawnPlan;
+        if (spawnPlan == null || spawnPlan.Count == 0)
+        {
+            spawnPlan = ProceduralSpawnPatternPlanner.BuildPattern(
+                currentWaveTuning.Pattern,
+                spawnQueue.Count,
+                Mathf.Max(0.05f, enemySpawnDelay),
+                spawnPoints.Count,
+                currentWaveTuning.EliteBudget,
+                currentWaveTuning.MiniBossBudget);
+        }
+
         int spawnedCount = 0;
         float totalHealthMult = 0f;
         float totalSpeedMult = 0f;
@@ -705,19 +958,25 @@ public class GameController : MonoBehaviour
 
         for (int i = 0; i < spawnQueue.Count; i++)
         {
+            SpawnInstruction instruction = i < spawnPlan.Count
+                ? spawnPlan[i]
+                : new SpawnInstruction
+                {
+                    SpawnPointIndex = spawnPoints.Count > 0 ? i % Mathf.Max(1, spawnPoints.Count) : 0,
+                    Delay = enemySpawnDelay
+                };
+
             if (spawnPoints.Count > 0)
             {
                 AttackerTypeDefinition attackerType = spawnQueue[i];
-                if (attackerType == null || attackerType.Prefab == null)
+                if (attackerType == null)
                 {
-                    Debug.LogError($"Unable to spawn enemy {i + 1}/{spawnQueue.Count} - attacker type entry is missing or has no prefab assigned.");
+                    Debug.LogError($"Unable to spawn enemy {i + 1}/{spawnQueue.Count} - attacker type entry is missing.");
                     continue;
                 }
 
-                GameObject prefabToSpawn = attackerType.Prefab;
-
                 // Select a random path start point
-                int pathIndex = Random.Range(0, spawnPoints.Count);
+                int pathIndex = Mathf.Clamp(instruction.SpawnPointIndex, 0, spawnPoints.Count - 1);
                 Vector3 spawnPoint = spawnPoints[pathIndex];
 
                 // Ensure enemy spawns exactly on the black tile
@@ -728,11 +987,42 @@ public class GameController : MonoBehaviour
 
                 // Create a procedural variant of this attacker type (stats + tint)
                 int defLevel = UpgradeManager.Instance != null ? UpgradeManager.Instance.GetDefenderLevel() : 0;
-                var variant = EnemyVariantGenerator.CreateVariant(attackerType, currentWave, defLevel);
+                int spawnsRemaining = Mathf.Max(1, spawnQueue.Count - i);
+                int elitesBudgetRemaining = Mathf.Max(0, currentWaveTuning.EliteBudget - elitesSpawnedThisWave);
+                int miniBossBudgetRemaining = Mathf.Max(0, currentWaveTuning.MiniBossBudget - miniBossesSpawnedThisWave);
+
+                VariantRequest variantRequest = new VariantRequest
+                {
+                    DifficultyScalar = currentWaveTuning.DifficultyScore,
+                    PatternAggression = currentWaveTuning.PatternAggression,
+                    EliteBudgetRatio = (float)elitesBudgetRemaining / spawnsRemaining,
+                    MiniBossBudgetRatio = (float)miniBossBudgetRemaining / spawnsRemaining,
+                    ForceElite = instruction.ForceElite,
+                    ForceMiniBoss = instruction.ForceMiniBoss
+                };
+
+                var variant = EnemyVariantGenerator.CreateVariant(attackerType, currentWave, defLevel, variantRequest);
+
+                GameObject prefabToSpawn = ResolvePrefabForVariant(attackerType, variant.category);
+                if (prefabToSpawn == null)
+                {
+                    Debug.LogError("No attacker prefab available for variant; skipping spawn.");
+                    continue;
+                }
 
                 totalHealthMult += variant.healthMultiplier;
                 totalSpeedMult += variant.speedMultiplier;
                 totalDamageMult += variant.damageMultiplier;
+                enemiesSpawnedThisWave++;
+
+                if (variant.category == VariantCategory.Elite)
+                {
+                    elitesSpawnedThisWave++;
+                }
+                else if (variant.category == VariantCategory.MiniBoss)
+                {
+                    miniBossesSpawnedThisWave++;
+                }
 
                 GameObject enemy = Instantiate(prefabToSpawn, exactSpawnPoint, Quaternion.identity);
 
@@ -742,10 +1032,18 @@ public class GameController : MonoBehaviour
                     continue;
                 }
 
+                if (!Mathf.Approximately(variant.sizeMultiplier, 1f))
+                {
+                    enemy.transform.localScale = enemy.transform.localScale * variant.sizeMultiplier;
+                }
+
                 AttackerController attacker = enemy.GetComponent<AttackerController>();
                 if (attacker != null)
                 {
                     int enemyHealth = GetEnemyHealthForWave(variant.definition);
+
+                    // Apply model selection based on wave and variant category
+                    EnemyModelSelector.SelectModel(enemy, currentWave, variant.category);
 
                     // Get the specific path for this enemy to follow
                     List<Vector3> enemyPath = mapController.GetPathByIndex(pathIndex);
@@ -790,17 +1088,18 @@ public class GameController : MonoBehaviour
                 break;
             }
 
-            yield return new WaitForSeconds(enemySpawnDelay);
+            yield return new WaitForSeconds(Mathf.Max(0f, instruction.Delay));
         }
 
         Debug.Log($"Finished spawning enemies. Spawned: {spawnedCount}, To spawn remaining: {enemiesRemaining}, Active enemies: {activeEnemies.Count}");
 
-        if (spawnedCount > 0 && variantTelemetry != null)
+        if (spawnedCount > 0)
         {
             float avgHealth = totalHealthMult / spawnedCount;
             float avgSpeed = totalSpeedMult / spawnedCount;
             float avgDamage = totalDamageMult / spawnedCount;
-            variantTelemetry.ShowVariantStats(currentWave, avgHealth, avgSpeed, avgDamage);
+            
+            Debug.Log($"Wave {currentWave} stats - Avg Health: {avgHealth:F2}x, Speed: {avgSpeed:F2}x, Damage: {avgDamage:F2}x");
         }
 
         CheckWaveCompletion("spawn complete");
@@ -905,7 +1204,33 @@ public class GameController : MonoBehaviour
     int GetEnemyHealthForWave(AttackerTypeDefinition attackerType)
     {
         int baseHealth = attackerType != null ? attackerType.BaseHealth : 100;
-        return Mathf.RoundToInt(baseHealth * Mathf.Pow(waveHealthMultiplier, currentWave - 1));
+        int scaled = DifficultyScaling.ScaleHealth(baseHealth, currentWave);
+        return Mathf.RoundToInt(scaled * Mathf.Max(0.01f, waveHealthMultiplier));
+    }
+
+    GameObject ResolvePrefabForVariant(AttackerTypeDefinition baseType, VariantCategory category)
+    {
+        if (category == VariantCategory.MiniBoss && miniBossAttackerPrefabOverride != null)
+        {
+            return miniBossAttackerPrefabOverride;
+        }
+
+        if (category == VariantCategory.Elite && eliteAttackerPrefabOverride != null)
+        {
+            return eliteAttackerPrefabOverride;
+        }
+
+        if (normalAttackerPrefabOverride != null)
+        {
+            return normalAttackerPrefabOverride;
+        }
+
+        if (baseType != null && baseType.Prefab != null)
+        {
+            return baseType.Prefab;
+        }
+
+        return null;
     }
 
     void CleanupDeadEnemies()
@@ -992,6 +1317,27 @@ public class GameController : MonoBehaviour
         GameOver();
     }
 
+    void RecordWaveResult()
+    {
+        if (adaptiveDifficulty == null)
+        {
+            return;
+        }
+
+        WaveResult result = new WaveResult
+        {
+            WaveIndex = currentWave,
+            StartingHealth = waveStartHealth,
+            HealthLost = Mathf.Max(0, waveStartHealth - health),
+            CombatDuration = combatPhaseStartTime > 0f ? Time.time - combatPhaseStartTime : 0f,
+            EnemiesSpawned = enemiesSpawnedThisWave,
+            ElitesSpawned = elitesSpawnedThisWave,
+            MiniBossesSpawned = miniBossesSpawnedThisWave
+        };
+
+        adaptiveDifficulty.RecordWaveResult(result);
+    }
+
     void CheckWaveCompletion(string source)
     {
         if (currentPhase == GamePhase.GameOver)
@@ -1018,6 +1364,9 @@ public class GameController : MonoBehaviour
 
         Debug.Log($"Wave {currentWave} completed via {source}. Starting preparation for wave {currentWave + 1}.");
 
+        RecordWaveResult();
+        combatPhaseStartTime = 0f;
+
         currentWave++;
         StartPreparationPhase();
     }
@@ -1034,6 +1383,7 @@ public class GameController : MonoBehaviour
         activeEnemies.Clear();
         enemiesAlive = 0;
         enemiesRemaining = 0;
+        combatPhaseStartTime = 0f;
 
         // Reset time scale before transitioning to the end scene
         float defaultTimeScale = (timeScaleOptions != null && timeScaleOptions.Count > 0)
@@ -1057,32 +1407,7 @@ public class GameController : MonoBehaviour
 
     void UpdateUI()
     {
-        if (stateText != null)
-        {
-            stateText.text = currentPhase == GamePhase.Preparation ? "PREPARATION" :
-                            currentPhase == GamePhase.Combat ? "COMBAT" : "GAME OVER";
-        }
-
-        if (moneyText != null)
-        {
-            moneyText.text = "$" + money.ToString();
-        }
-
-        if (playerHealthText != null)
-        {
-            playerHealthText.text = "Health " + Mathf.Max(0, health).ToString();
-        }
-
-        if (timerText != null)
-        {
-            if (currentPhase == GamePhase.Preparation)
-            {
-                timerText.text = "Time: " + Mathf.Ceil(timer).ToString();
-            }
-            else if (currentPhase == GamePhase.Combat)
-            {
-                timerText.text = "Wave " + currentWave + " | Enemies: " + activeEnemies.Count;
-            }
-        }
+        // UI Toolkit handles the HUD now - this method is kept for compatibility
+        // InfoHudUIDocument updates the UI automatically
     }
 }

@@ -1,0 +1,153 @@
+/* Info HUD - Full Height Left Dock */
+.hud-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 200px;
+    flex-direction: row;
+    transition-property: left;
+    transition-duration: 0.3s;
+    transition-timing-function: ease-in-out;
+}
+
+.hud-root.docked {
+    left: -200px;
+}
+
+/* Main Panel Container */
+.hud-panel {
+    width: 200px;
+    flex-grow: 1;
+    background-color: rgba(15, 20, 30, 0.92);
+    border-right-width: 2px;
+    border-color: rgba(100, 150, 255, 0.5);
+    flex-direction: column;
+}
+
+/* Dock Toggle Button */
+.dock-toggle {
+    width: 24px;
+    height: 60px;
+    position: absolute;
+    right: -24px;
+    top: 50%;
+    margin-top: -30px;
+    background-color: rgba(40, 60, 120, 0.9);
+    border-width: 1px;
+    border-left-width: 0;
+    border-color: rgba(100, 150, 255, 0.4);
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+    font-size: 16px;
+    -unity-font-style: bold;
+    color: #E8F0FF;
+    padding: 0;
+}
+
+.dock-toggle:hover {
+    background-color: rgba(60, 90, 160, 1);
+    color: #FFFFFF;
+}
+
+.dock-toggle:active {
+    background-color: rgba(50, 80, 140, 1);
+}
+
+/* Header */
+.hud-header {
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(40, 60, 120, 0.8);
+    padding: 14px 12px;
+    border-bottom-width: 2px;
+    border-color: rgba(100, 150, 255, 0.4);
+    flex-shrink: 0;
+}
+
+.hud-title {
+    font-size: 14px;
+    -unity-font-style: bold;
+    color: #FFFFFF;
+    letter-spacing: 1.5px;
+}
+
+/* Stats Container */
+.stats-container {
+    padding: 20px 14px;
+    flex-direction: column;
+    flex-grow: 1;
+    justify-content: flex-start;
+}
+
+.stat-item {
+    flex-direction: column;
+    margin-bottom: 24px;
+    flex-shrink: 0;
+}
+
+.stat-label {
+    font-size: 10px;
+    -unity-font-style: bold;
+    color: #A0B0C0;
+    letter-spacing: 0.8px;
+    margin-bottom: 6px;
+}
+
+.stat-value {
+    font-size: 15px;
+    -unity-font-style: bold;
+    color: #E8F0FF;
+    margin-top: 4px;
+}
+
+.stat-value-large {
+    font-size: 32px;
+    -unity-font-style: bold;
+    color: #FFD700;
+    -unity-text-align: middle-center;
+    padding: 8px 0;
+}
+
+.stat-progress {
+    height: 14px;
+    background-color: rgba(30, 35, 45, 0.9);
+    border-radius: 7px;
+    border-width: 1px;
+    border-color: rgba(100, 150, 255, 0.3);
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+.stat-progress .unity-progress-bar__background {
+    background-color: rgba(30, 35, 45, 0.9);
+    border-radius: 7px;
+}
+
+.stat-progress .unity-progress-bar__progress {
+    background-color: #4CAF50;
+    border-radius: 6px;
+}
+
+/* Status Box */
+.status-box {
+    padding: 14px 12px;
+    background-color: rgba(30, 40, 60, 0.7);
+    border-top-width: 2px;
+    border-color: rgba(100, 150, 255, 0.4);
+    margin-top: auto;
+    flex-shrink: 0;
+}
+
+.status-message {
+    font-size: 12px;
+    color: #C8D4E8;
+    -unity-text-align: middle-center;
+    -unity-font-style: italic;
+}
+
+/* Animations */
+.hud-root {
+    transition-duration: 0.3s;
+}

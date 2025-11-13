@@ -7,54 +7,68 @@ using UnityEngine;
 /// </summary>
 public class UpgradeManagerTests
 {
-    [Test]
-    public void DefenderHealthModifier_ReturnsCorrectMultiplier()
+    private GameObject managerObject;
+    private UpgradeManager upgradeManager;
+
+    [SetUp]
+    public void SetUp()
     {
-        var config = ScriptableObject.CreateInstance<UpgradeManager>();
-        
-        float level0 = config.GetDefenderHealthModifier(0);
-        Assert.AreEqual(1.0f, level0, 0.01f, "Level 0 should have no modifier");
+        managerObject = new GameObject("UpgradeManager_Test");
+        upgradeManager = managerObject.AddComponent<UpgradeManager>();
+    }
 
-        float level1 = config.GetDefenderHealthModifier(1);
-        Assert.Greater(level1, 1.0f, "Level 1 should increase health");
-
-        float level2 = config.GetDefenderHealthModifier(2);
-        Assert.Greater(level2, level1, "Level 2 should be greater than Level 1");
+    [TearDown]
+    public void TearDown()
+    {
+        if (managerObject != null)
+        {
+            Object.DestroyImmediate(managerObject);
+            managerObject = null;
+            upgradeManager = null;
+        }
     }
 
     [Test]
-    public void TowerHealthModifier_ReturnsCorrectMultiplier()
+    public void DefenderHealthBonus_IncreasesWithUpgrades()
     {
-        var config = ScriptableObject.CreateInstance<UpgradeManager>();
-        
-        float level0 = config.GetTowerHealthModifier(0);
-        Assert.AreEqual(1.0f, level0, 0.01f, "Level 0 should have no modifier");
+        Assert.AreEqual(0, upgradeManager.GetDefenderHealthBonus(), "Level 0 should have no health bonus");
 
-        float level1 = config.GetTowerHealthModifier(1);
-        Assert.Greater(level1, 1.0f, "Level 1 should increase tower health");
+        upgradeManager.UpgradeDefenders();
+        int level1Bonus = upgradeManager.GetDefenderHealthBonus();
+        Assert.Greater(level1Bonus, 0, "Level 1 should increase health");
+
+        upgradeManager.UpgradeDefenders();
+        int level2Bonus = upgradeManager.GetDefenderHealthBonus();
+        Assert.Greater(level2Bonus, level1Bonus, "Higher level should provide larger bonus");
     }
 
     [Test]
-    public void FireRateModifier_ReturnsValidValues()
+    public void TowerHealthBonus_IncreasesWithUpgrades()
     {
-        var config = ScriptableObject.CreateInstance<UpgradeManager>();
-        
-        float level0 = config.GetDefenderFireRateModifier(0);
-        Assert.AreEqual(1.0f, level0, 0.01f, "Level 0 should have base fire rate");
+        Assert.AreEqual(0, upgradeManager.GetTowerHealthBonus(), "Level 0 should have no tower bonus");
 
-        float level2 = config.GetDefenderFireRateModifier(2);
-        Assert.Greater(level2, 1.0f, "Higher level should increase fire rate");
+        upgradeManager.UpgradeTower();
+        int level1Bonus = upgradeManager.GetTowerHealthBonus();
+        Assert.Greater(level1Bonus, 0, "Level 1 should increase tower health bonus");
     }
 
     [Test]
-    public void DamageModifier_ReturnsValidValues()
+    public void FireRateMultiplier_ReturnsValidValues()
     {
-        var config = ScriptableObject.CreateInstance<UpgradeManager>();
-        
-        float level0 = config.GetDefenderDamageModifier(0);
-        Assert.AreEqual(1.0f, level0, 0.01f, "Level 0 should have base damage");
+        Assert.AreEqual(1.0f, upgradeManager.GetDefenderFireRateMultiplier(), 0.01f, "Level 0 should have base fire rate");
 
-        float level2 = config.GetDefenderDamageModifier(2);
-        Assert.Greater(level2, 1.0f, "Higher level should increase damage");
+        upgradeManager.UpgradeDefenders();
+        float level1 = upgradeManager.GetDefenderFireRateMultiplier();
+        Assert.Greater(level1, 1.0f, "Level 1 should increase fire rate");
+    }
+
+    [Test]
+    public void DamageMultiplier_ReturnsValidValues()
+    {
+        Assert.AreEqual(1.0f, upgradeManager.GetDefenderDamageMultiplier(), 0.01f, "Level 0 should have base damage");
+
+        upgradeManager.UpgradeDefenders();
+        float level1 = upgradeManager.GetDefenderDamageMultiplier();
+        Assert.Greater(level1, 1.0f, "Level 1 should increase damage");
     }
 }

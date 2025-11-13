@@ -1,0 +1,27 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+  <ui:VisualElement name="banner-root" class="banner-root">
+    <!-- Money Display -->
+    <ui:VisualElement name="banner-money" class="banner-item">
+      <ui:Label text="⚔" class="banner-icon"/>
+      <ui:Label name="banner-money-value" text="$300" class="banner-value"/>
+    </ui:VisualElement>
+    
+    <!-- Wave Display -->
+    <ui:VisualElement name="banner-wave" class="banner-item banner-highlight">
+      <ui:Label text="WAVE" class="banner-label"/>
+      <ui:Label name="banner-wave-value" text="1" class="banner-value-large"/>
+    </ui:VisualElement>
+    
+    <!-- Timer Display -->
+    <ui:VisualElement name="banner-timer" class="banner-item">
+      <ui:Label name="banner-phase" text="PREPARATION" class="banner-label"/>
+      <ui:Label name="banner-timer-value" text="00:30" class="banner-value"/>
+    </ui:VisualElement>
+    
+    <!-- Health Display -->
+    <ui:VisualElement name="banner-health" class="banner-item">
+      <ui:Label text="HEALTH" class="banner-label"/>
+      <ui:Label name="banner-health-value" text="100" class="banner-value"/>
+    </ui:VisualElement>
+  </ui:VisualElement>
+</ui:UXML>

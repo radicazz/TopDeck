@@ -1,0 +1,565 @@
+[
+  {
+    "category": "Upgrades",
+    "name": "Upgrade All Defenders",
+    "command": "UpgradeManager.UpgradeAllDefenders()",
+    "description": "Upgrades all defenders to the next level",
+    "parameters": {},
+    "hotkey": "Shift+U"
+  },
+  {
+    "category": "Upgrades",
+    "name": "Max All Upgrades",
+    "command": "UpgradeManager.MaxAllUpgrades()",
+    "description": "Sets all defenders and tower to maximum upgrade level",
+    "parameters": {},
+    "hotkey": "Ctrl+Shift+U"
+  },
+  {
+    "category": "Upgrades",
+    "name": "Reset All Upgrades",
+    "command": "UpgradeManager.ResetAllUpgrades()",
+    "description": "Resets all upgrades to level 0",
+    "parameters": {},
+    "hotkey": "Ctrl+R"
+  },
+  {
+    "category": "Upgrades",
+    "name": "Upgrade Tower",
+    "command": "UpgradeManager.UpgradeTower()",
+    "description": "Upgrades the main tower by one level",
+    "parameters": {},
+    "hotkey": "T"
+  },
+  {
+    "category": "Upgrades",
+    "name": "Test Upgrade Visuals",
+    "command": "UpgradeManager.TestVisualProgression()",
+    "description": "Cycles through all upgrade visuals for testing",
+    "parameters": {
+      "duration": 2.0,
+      "loop": true
+    },
+    "hotkey": ""
+  },
+  {
+    "category": "Upgrades",
+    "name": "Apply Random Upgrades",
+    "command": "UpgradeManager.ApplyRandomUpgrades(3)",
+    "description": "Applies 3 random upgrades to random defenders",
+    "parameters": {
+      "count": 3
+    },
+    "hotkey": ""
+  },
+  {
+    "category": "Upgrades",
+    "name": "Set All Upgrades Level 1",
+    "command": "UpgradeManager.SetAllUpgradeLevel(1)",
+    "description": "Sets all defenders to upgrade level 1",
+    "parameters": {
+      "level": 1
+    },
+    "hotkey": ""
+  },
+  {
+    "category": "Upgrades",
+    "name": "Set All Upgrades Level 2",
+    "command": "UpgradeManager.SetAllUpgradeLevel(2)",
+    "description": "Sets all defenders to upgrade level 2",
+    "parameters": {
+      "level": 2
+    },
+    "hotkey": ""
+  },
+  {
+    "category": "Upgrades",
+    "name": "Set All Upgrades Level 3",
+    "command": "UpgradeManager.SetAllUpgradeLevel(3)",
+    "description": "Sets all defenders to upgrade level 3",
+    "parameters": {
+      "level": 3
+    },
+    "hotkey": ""
+  },
+  {
+    "category": "Upgrades",
+    "name": "Set All Upgrades Level 4",
+    "command": "UpgradeManager.SetAllUpgradeLevel(4)",
+    "description": "Sets all defenders to upgrade level 4",
+    "parameters": {
+      "level": 4
+    },
+    "hotkey": ""
+  },
+  {
+    "category": "Upgrades",
+    "name": "Set All Upgrades Level 5",
+    "command": "UpgradeManager.SetAllUpgradeLevel(5)",
+    "description": "Sets all defenders to upgrade level 5",
+    "parameters": {
+      "level": 5
+    },
+    "hotkey": ""
+  },
+  {
+    "category": "Waves",
+    "name": "Skip to Wave",
+    "command": "GameController.SkipToWave(10)",
+    "description": "Skip to a specific wave number",
+    "parameters": {
+      "wave": 10
+    },
+    "hotkey": "Ctrl+W"
+  },
+  {
+    "category": "Waves",
+    "name": "Force Next Wave",
+    "command": "GameController.ForceNextWave()",
+    "description": "Immediately starts the next wave",
+    "parameters": {},
+    "hotkey": "N"
+  },
+  {
+    "category": "Waves",
+    "name": "End Current Wave",
+    "command": "GameController.EndCurrentWave()",
+    "description": "Immediately ends the current wave",
+    "parameters": {},
+    "hotkey": "E"
+  },
+  {
+    "category": "Waves",
+    "name": "Pause Wave Spawning",
+    "command": "GameController.PauseWaveSpawning()",
+    "description": "Pauses enemy spawning in current wave",
+    "parameters": {},
+    "hotkey": "P"
+  },
+  {
+    "category": "Waves",
+    "name": "Test Boss Wave",
+    "command": "GameController.SpawnBossWave()",
+    "description": "Spawns a test boss wave",
+    "parameters": {
+      "boss_count": 1,
+      "minion_count": 20
+    },
+    "hotkey": ""
+  },
+  {
+    "category": "Waves",
+    "name": "Test Elite Wave",
+    "command": "GameController.SpawnEliteWave()",
+    "description": "Spawns a wave with only elite enemies",
+    "parameters": {
+      "elite_count": 10
+    },
+    "hotkey": ""
+  },
+  {
+    "category": "Waves",
+    "name": "Jump to Wave 5",
+    "command": "GameController.SkipToWave(5)",
+    "description": "Immediately jump to wave 5",
+    "parameters": {
+      "wave": 5
+    },
+    "hotkey": ""
+  },
+  {
+    "category": "Waves",
+    "name": "Jump to Wave 10",
+    "command": "GameController.SkipToWave(10)",
+    "description": "Immediately jump to wave 10",
+    "parameters": {
+      "wave": 10
+    },
+    "hotkey": ""
+  },
+  {
+    "category": "Waves",
+    "name": "Jump to Wave 20",
+    "command": "GameController.SkipToWave(20)",
+    "description": "Immediately jump to wave 20",
+    "parameters": {
+      "wave": 20
+    },
+    "hotkey": ""
+  },
+  {
+    "category": "Waves",
+    "name": "Jump to Wave 50",
+    "command": "GameController.SkipToWave(50)",
+    "description": "Immediately jump to wave 50",
+    "parameters": {
+      "wave": 50
+    },
+    "hotkey": ""
+  },
+  {
+    "category": "Waves",
+    "name": "Jump to Wave 100",
+    "command": "GameController.SkipToWave(100)",
+    "description": "Immediately jump to wave 100",
+    "parameters": {
+      "wave": 100
+    },
+    "hotkey": ""
+  },
+  {
+    "category": "Spawning",
+    "name": "Spawn Enemy Type 1",
+    "command": "GameController.SpawnEnemy(AttackerType.Type1, SpawnPoint.Random)",
+    "description": "Spawns a Type 1 enemy at random spawn point",
+    "parameters": {},
+    "hotkey": "1"
+  },
+  {
+    "category": "Spawning",
+    "name": "Spawn Enemy Type 2",
+    "command": "GameController.SpawnEnemy(AttackerType.Type2, SpawnPoint.Random)",
+    "description": "Spawns a Type 2 enemy at random spawn point",
+    "parameters": {},
+    "hotkey": "2"
+  },
+  {
+    "category": "Spawning",
+    "name": "Spawn Enemy Type 3",
+    "command": "GameController.SpawnEnemy(AttackerType.Type3, SpawnPoint.Random)",
+    "description": "Spawns a Type 3 enemy at random spawn point",
+    "parameters": {},
+    "hotkey": "3"
+  },
+  {
+    "category": "Spawning",
+    "name": "Spawn Elite Enemy",
+    "command": "GameController.SpawnEliteEnemy()",
+    "description": "Spawns an elite variant enemy",
+    "parameters": {
+      "multiplier": 2.5
+    },
+    "hotkey": ""
+  },
+  {
+    "category": "Spawning",
+    "name": "Spawn Mini Boss",
+    "command": "GameController.SpawnMiniBoss()",
+    "description": "Spawns a mini-boss enemy",
+    "parameters": {
+      "health_multiplier": 5.0,
+      "reward_multiplier": 3.0
+    },
+    "hotkey": ""
+  },
+  {
+    "category": "Spawning",
+    "name": "Spawn Enemy Cluster",
+    "command": "GameController.SpawnEnemyCluster(10)",
+    "description": "Spawns a cluster of enemies",
+    "parameters": {
+      "count": 10,
+      "radius": 2.0
+    },
+    "hotkey": ""
+  },
+  {
+    "category": "Spawning",
+    "name": "Test Spawn Pattern",
+    "command": "SpawnPatternPlanner.TestPattern('alternating')",
+    "description": "Tests a specific spawn pattern",
+    "parameters": {
+      "pattern": "alternating"
+    },
+    "hotkey": ""
+  },
+  {
+    "category": "Economy",
+    "name": "Add Money",
+    "command": "GameController.AddMoney(1000)",
+    "description": "Adds 1000 currency to player",
+    "parameters": {
+      "amount": 1000
+    },
+    "hotkey": "M"
+  },
+  {
+    "category": "Economy",
+    "name": "Set Money",
+    "command": "GameController.SetMoney(5000)",
+    "description": "Sets player money to specific amount",
+    "parameters": {
+      "amount": 5000
+    },
+    "hotkey": ""
+  },
+  {
+    "category": "Economy",
+    "name": "Infinite Money",
+    "command": "GameController.SetInfiniteMoney(true)",
+    "description": "Enables infinite money mode",
+    "parameters": {
+      "enabled": true
+    },
+    "hotkey": "Ctrl+M"
+  },
+  {
+    "category": "Economy",
+    "name": "Test Economy Balance",
+    "command": "GameController.TestEconomyBalance()",
+    "description": "Runs economy simulation for balance testing",
+    "parameters": {},
+    "hotkey": ""
+  },
+  {
+    "category": "Economy",
+    "name": "Double Rewards",
+    "command": "GameController.SetRewardMultiplier(2.0)",
+    "description": "Doubles all enemy kill rewards",
+    "parameters": {
+      "multiplier": 2.0
+    },
+    "hotkey": ""
+  },
+  {
+    "category": "Defenders",
+    "name": "Spawn Basic Defender",
+    "command": "GameController.SpawnDefender('Basic', MousePosition)",
+    "description": "Spawns a basic defender at mouse position",
+    "parameters": {},
+    "hotkey": "B"
+  },
+  {
+    "category": "Defenders",
+    "name": "Spawn Long Range Defender",
+    "command": "GameController.SpawnDefender('Long', MousePosition)",
+    "description": "Spawns a long-range defender at mouse position",
+    "parameters": {},
+    "hotkey": "L"
+  },
+  {
+    "category": "Defenders",
+    "name": "Spawn Short Range Defender",
+    "command": "GameController.SpawnDefender('Short', MousePosition)",
+    "description": "Spawns a short-range defender at mouse position",
+    "parameters": {},
+    "hotkey": "S"
+  },
+  {
+    "category": "Defenders",
+    "name": "Heal All Defenders",
+    "command": "GameController.HealAllDefenders()",
+    "description": "Fully heals all defenders",
+    "parameters": {},
+    "hotkey": "H"
+  },
+  {
+    "category": "Defenders",
+    "name": "Damage All Defenders",
+    "command": "GameController.DamageAllDefenders(50)",
+    "description": "Damages all defenders by 50 HP",
+    "parameters": {
+      "damage": 50
+    },
+    "hotkey": ""
+  },
+  {
+    "category": "Defenders",
+    "name": "God Mode Defenders",
+    "command": "GameController.SetDefenderGodMode(true)",
+    "description": "Makes all defenders invincible",
+    "parameters": {
+      "enabled": true
+    },
+    "hotkey": "G"
+  },
+  {
+    "category": "Defenders",
+    "name": "Boost Attack Speed",
+    "command": "GameController.SetDefenderAttackSpeedMultiplier(2.0)",
+    "description": "Doubles defender attack speed",
+    "parameters": {
+      "multiplier": 2.0
+    },
+    "hotkey": ""
+  },
+  {
+    "category": "Performance",
+    "name": "Stress Test Enemies",
+    "command": "PerformanceTest.SpawnEnemies(100)",
+    "description": "Spawns 100 enemies for stress testing",
+    "parameters": {
+      "count": 100
+    },
+    "hotkey": ""
+  },
+  {
+    "category": "Performance",
+    "name": "Stress Test Projectiles",
+    "command": "PerformanceTest.SpawnProjectiles(500)",
+    "description": "Spawns 500 projectiles for stress testing",
+    "parameters": {
+      "count": 500
+    },
+    "hotkey": ""
+  },
+  {
+    "category": "Performance",
+    "name": "Toggle FPS Display",
+    "command": "Debug.ToggleFPSDisplay()",
+    "description": "Shows/hides FPS counter",
+    "parameters": {},
+    "hotkey": "F"
+  },
+  {
+    "category": "Performance",
+    "name": "Profile Frame",
+    "command": "Debug.ProfileCurrentFrame()",
+    "description": "Captures profiling data for current frame",
+    "parameters": {},
+    "hotkey": "Ctrl+P"
+  },
+  {
+    "category": "Performance",
+    "name": "Memory Snapshot",
+    "command": "Debug.TakeMemorySnapshot()",
+    "description": "Takes a memory snapshot for analysis",
+    "parameters": {},
+    "hotkey": ""
+  },
+  {
+    "category": "Performance",
+    "name": "Toggle Pooling",
+    "command": "GameController.SetObjectPooling(!enabled)",
+    "description": "Toggles object pooling on/off",
+    "parameters": {},
+    "hotkey": ""
+  },
+  {
+    "category": "Visual",
+    "name": "Test Upgrade VFX",
+    "command": "VFXManager.PlayUpgradeEffect(MousePosition)",
+    "description": "Plays upgrade particle effect at mouse",
+    "parameters": {},
+    "hotkey": "V"
+  },
+  {
+    "category": "Visual",
+    "name": "Test Hit VFX",
+    "command": "VFXManager.PlayHitEffect(MousePosition)",
+    "description": "Plays hit particle effect at mouse",
+    "parameters": {},
+    "hotkey": ""
+  },
+  {
+    "category": "Visual",
+    "name": "Test Screen Shake",
+    "command": "CameraController.ScreenShake(1.0, 0.5)",
+    "description": "Tests screen shake effect",
+    "parameters": {
+      "intensity": 1.0,
+      "duration": 0.5
+    },
+    "hotkey": ""
+  },
+  {
+    "category": "Visual",
+    "name": "Test Post Process Pulse",
+    "command": "PostProcessController.TriggerPulse()",
+    "description": "Triggers post-processing pulse effect",
+    "parameters": {},
+    "hotkey": "Ctrl+V"
+  },
+  {
+    "category": "Visual",
+    "name": "Cycle Shader Properties",
+    "command": "ShaderController.CycleProperties()",
+    "description": "Cycles through shader property variations",
+    "parameters": {},
+    "hotkey": ""
+  },
+  {
+    "category": "Visual",
+    "name": "Toggle Wireframe Mode",
+    "command": "RenderSettings.SetWireframe(!enabled)",
+    "description": "Toggles wireframe rendering mode",
+    "parameters": {},
+    "hotkey": "W"
+  },
+  {
+    "category": "Visual",
+    "name": "Test Color Variants",
+    "command": "VariantAppearance.TestColorVariations()",
+    "description": "Shows all enemy color variations",
+    "parameters": {},
+    "hotkey": ""
+  },
+  {
+    "category": "Testing",
+    "name": "Test Early Game",
+    "command": "TestScenario.RunEarlyGame()",
+    "description": "Sets up early game scenario (waves 1-5)",
+    "parameters": {
+      "waves": "1-5",
+      "money": 500,
+      "upgrades": 0
+    },
+    "hotkey": ""
+  },
+  {
+    "category": "Testing",
+    "name": "Test Mid Game",
+    "command": "TestScenario.RunMidGame()",
+    "description": "Sets up mid game scenario (waves 10-15)",
+    "parameters": {
+      "waves": "10-15",
+      "money": 2000,
+      "upgrades": 2
+    },
+    "hotkey": ""
+  },
+  {
+    "category": "Testing",
+    "name": "Test Late Game",
+    "command": "TestScenario.RunLateGame()",
+    "description": "Sets up late game scenario (waves 20+)",
+    "parameters": {
+      "waves": "20+",
+      "money": 5000,
+      "upgrades": 4
+    },
+    "hotkey": ""
+  },
+  {
+    "category": "Testing",
+    "name": "Test Boss Battle",
+    "command": "TestScenario.RunBossBattle()",
+    "description": "Sets up boss battle scenario",
+    "parameters": {},
+    "hotkey": ""
+  },
+  {
+    "category": "Testing",
+    "name": "Test Upgrade Progression",
+    "command": "TestScenario.TestUpgradeProgression()",
+    "description": "Tests all upgrade levels in sequence",
+    "parameters": {},
+    "hotkey": ""
+  },
+  {
+    "category": "Testing",
+    "name": "Test Defense Layout",
+    "command": "TestScenario.TestOptimalLayout()",
+    "description": "Places defenders in optimal test configuration",
+    "parameters": {},
+    "hotkey": ""
+  },
+  {
+    "category": "Testing",
+    "name": "Run All Tests",
+    "command": "TestScenario.RunAllTests()",
+    "description": "Runs complete test suite",
+    "parameters": {},
+    "hotkey": "Ctrl+T"
+  }
+]

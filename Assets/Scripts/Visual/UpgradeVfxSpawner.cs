@@ -12,6 +12,12 @@ public class UpgradeVfxSpawner : MonoBehaviour
     [SerializeField] private bool parentToAnchor = true;
     [SerializeField] private bool autoDestroyInstances = true;
     [SerializeField] private float destroyPaddingSeconds = 0.25f;
+    [SerializeField] private bool monitorUpgradeLevels = true;
+    [SerializeField] private float pollInterval = 0.25f;
+
+    private int lastDefenderLevel = -1;
+    private int lastTowerLevel = -1;
+    private float nextPollTime;
 
     public void PlayDefenderUpgrade()
     {
@@ -21,6 +27,48 @@ public class UpgradeVfxSpawner : MonoBehaviour
     public void PlayTowerUpgrade()
     {
         SpawnEffect(towerUpgradeEffect, towerEffectAnchor);
+    }
+
+    void OnEnable()
+    {
+        CacheUpgradeLevels();
+        nextPollTime = Time.time;
+    }
+
+    void Update()
+    {
+        if (!Application.isPlaying || !monitorUpgradeLevels)
+        {
+            return;
+        }
+
+        if (UpgradeManager.Instance == null)
+        {
+            return;
+        }
+
+        if (Time.time < nextPollTime)
+        {
+            return;
+        }
+
+        nextPollTime = Time.time + Mathf.Max(0.05f, pollInterval);
+
+        int currentDefender = UpgradeManager.Instance.GetDefenderLevel();
+        int currentTower = UpgradeManager.Instance.GetTowerLevel();
+
+        if (lastDefenderLevel >= 0 && currentDefender > lastDefenderLevel)
+        {
+            PlayDefenderUpgrade();
+        }
+
+        if (lastTowerLevel >= 0 && currentTower > lastTowerLevel)
+        {
+            PlayTowerUpgrade();
+        }
+
+        lastDefenderLevel = currentDefender;
+        lastTowerLevel = currentTower;
     }
 
     void SpawnEffect(ParticleSystem prefab, Transform anchor)
@@ -53,5 +101,18 @@ public class UpgradeVfxSpawner : MonoBehaviour
 
             Destroy(instance.gameObject, Mathf.Max(0.1f, lifetime + destroyPaddingSeconds));
         }
+    }
+
+    void CacheUpgradeLevels()
+    {
+        if (UpgradeManager.Instance == null)
+        {
+            lastDefenderLevel = -1;
+            lastTowerLevel = -1;
+            return;
+        }
+
+        lastDefenderLevel = UpgradeManager.Instance.GetDefenderLevel();
+        lastTowerLevel = UpgradeManager.Instance.GetTowerLevel();
     }
 }

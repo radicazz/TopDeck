@@ -13,6 +13,7 @@ public class UpgradeVisualShaderDriver : MonoBehaviour
     }
 
     [SerializeField] private Renderer targetRenderer;
+    [SerializeField] private UpgradeModelSwapper modelSwapper;
     [SerializeField] private ValueSource valueSource = ValueSource.DefenderLevel;
     [SerializeField] private string floatProperty = "_UpgradeLevel";
     [SerializeField] private string colorProperty = "_UpgradeColor";
@@ -44,6 +45,26 @@ public class UpgradeVisualShaderDriver : MonoBehaviour
 
     void EnsureRenderer()
     {
+        if (targetRenderer != null && targetRenderer.gameObject.activeInHierarchy)
+        {
+            return;
+        }
+
+        if (modelSwapper == null)
+        {
+            modelSwapper = GetComponent<UpgradeModelSwapper>();
+        }
+
+        if (modelSwapper != null)
+        {
+            var candidate = modelSwapper.GetActiveRenderer();
+            if (candidate != null)
+            {
+                targetRenderer = candidate;
+                return;
+            }
+        }
+
         if (targetRenderer == null)
         {
             targetRenderer = GetComponent<Renderer>();

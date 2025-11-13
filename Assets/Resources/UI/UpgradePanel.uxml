@@ -1,0 +1,51 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+  <ui:VisualElement name="upgrade-root" class="upgrade-root">
+    <!-- Dock Toggle Button - Always visible -->
+    <ui:Button name="dock-toggle" text="&gt;" class="dock-toggle dock-toggle-right"/>
+    
+    <!-- Main Panel Content -->
+    <ui:VisualElement name="upgrade-panel" class="upgrade-panel">
+      <!-- Header -->
+      <ui:VisualElement name="header" class="upgrade-header">
+        <ui:Label name="tower-title" text="TOWER UPGRADE" class="upgrade-title"/>
+        <ui:Button name="close-btn" text="✕" class="close-button"/>
+      </ui:VisualElement>
+      
+      <!-- Empty State Message -->
+      <ui:VisualElement name="empty-state" class="empty-state" style="display: flex;">
+        <ui:Label text="Select a tower!" class="empty-state-text"/>
+        <ui:Label text="Click on the tower to view upgrades" class="empty-state-hint"/>
+      </ui:VisualElement>
+      
+      <!-- Tower Content (hidden when no tower selected) -->
+      <ui:VisualElement name="tower-content" style="display: none; flex-grow: 1; flex-direction: column;">
+        <!-- Level Badge -->
+        <ui:VisualElement name="level-badge" class="level-badge">
+          <ui:Label name="tower-level" text="LV 1" class="level-text"/>
+        </ui:VisualElement>
+        
+        <!-- Stats Display -->
+        <ui:VisualElement name="stats-container" class="stats-container">
+          <ui:VisualElement name="stat-item" class="stat-item">
+            <ui:Label text="HEALTH" class="stat-label"/>
+            <ui:ProgressBar name="tower-progress" high-value="3" value="1" class="stat-progress"/>
+          </ui:VisualElement>
+        </ui:VisualElement>
+        
+        <!-- Description -->
+        <ui:VisualElement name="desc-box" class="desc-box">
+          <ui:Label name="tower-desc" text="Fortify your defenses" class="desc-text"/>
+        </ui:VisualElement>
+        
+        <!-- Upgrade Button -->
+        <ui:Button name="tower-upgrade" text="⬆ UPGRADE" class="upgrade-button"/>
+        
+        <!-- Status Footer -->
+        <ui:VisualElement name="footer" class="upgrade-footer">
+          <ui:Label name="status-text" text="Ready" class="status-text"/>
+          <ui:Label text="Press ESC to close" class="esc-hint"/>
+        </ui:VisualElement>
+      </ui:VisualElement>
+    </ui:VisualElement>
+  </ui:VisualElement>
+</ui:UXML>

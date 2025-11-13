@@ -11,6 +11,10 @@ public class DefenseController : MonoBehaviour
     [SerializeField] private float projectileSpeed = 10f;
     [SerializeField] private bool useInstantDamage = false; // Alternative to projectiles
 
+    private bool _hasBaseStats;
+    private int _baseDamage;
+    private float _baseFireRate;
+
     [Header("Projectile")]
     [SerializeField] private GameObject projectilePrefab;
     [SerializeField] private Transform firePoint; // Where projectiles spawn from
@@ -22,6 +26,23 @@ public class DefenseController : MonoBehaviour
     private float lastFireTime;
     private List<AttackerController> enemiesInRange = new List<AttackerController>();
     private SphereCollider rangeCollider;
+
+    [System.Serializable]
+    public struct DefenseStatsSnapshot
+    {
+        public int BaseDamage;
+        public float BaseFireRate;
+        public int Damage;
+        public float FireRate;
+        public float Range;
+        public float ProjectileSpeed;
+        public bool UseInstantDamage;
+    }
+
+    void Awake()
+    {
+        CacheBaseStats();
+    }
 
     void Start()
     {
@@ -320,5 +341,53 @@ public class DefenseController : MonoBehaviour
             Gizmos.color = Color.yellow;
             Gizmos.DrawLine(transform.position, currentTarget.transform.position);
         }
+    }
+
+    void CacheBaseStats()
+    {
+        if (_hasBaseStats)
+        {
+            return;
+        }
+
+        _baseDamage = Mathf.Max(1, damage);
+        _baseFireRate = Mathf.Max(0.01f, fireRate);
+        _hasBaseStats = true;
+    }
+
+    public void SetBaseStats(int baseDamageValue, float baseFireRateValue)
+    {
+        CacheBaseStats();
+        _baseDamage = Mathf.Max(1, baseDamageValue);
+        _baseFireRate = Mathf.Max(0.01f, baseFireRateValue);
+        damage = _baseDamage;
+        fireRate = _baseFireRate;
+    }
+
+    public void ApplyMultipliers(float damageMultiplier, float fireRateMultiplier)
+    {
+        CacheBaseStats();
+
+        float normalizedDamageMul = Mathf.Max(0f, damageMultiplier);
+        float normalizedFireRateMul = Mathf.Max(0.01f, fireRateMultiplier);
+
+        damage = Mathf.Max(1, Mathf.RoundToInt(_baseDamage * normalizedDamageMul));
+        fireRate = Mathf.Max(0.01f, _baseFireRate * normalizedFireRateMul);
+    }
+
+    public DefenseStatsSnapshot GetCurrentStats()
+    {
+        CacheBaseStats();
+
+        return new DefenseStatsSnapshot
+        {
+            BaseDamage = _baseDamage,
+            BaseFireRate = _baseFireRate,
+            Damage = damage,
+            FireRate = fireRate,
+            Range = range,
+            ProjectileSpeed = projectileSpeed,
+            UseInstantDamage = useInstantDamage
+        };
     }
 }

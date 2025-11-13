@@ -1,0 +1,66 @@
+/* Top Banner - Horizontal Info Bar */
+.banner-root {
+    position: absolute;
+    top: 0;
+    left: 200px;
+    right: 0;
+    height: 50px;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(15, 20, 30, 0.9);
+    border-bottom-width: 2px;
+    border-color: rgba(100, 150, 255, 0.4);
+    gap: 30px;
+    padding: 0 20px;
+}
+
+/* Banner Items */
+.banner-item {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    background-color: rgba(30, 40, 60, 0.5);
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: rgba(100, 150, 255, 0.2);
+}
+
+.banner-highlight {
+    background-color: rgba(40, 60, 120, 0.6);
+    border-color: rgba(100, 150, 255, 0.4);
+    border-width: 2px;
+}
+
+/* Banner Text */
+.banner-icon {
+    font-size: 18px;
+    color: #FFD700;
+}
+
+.banner-label {
+    font-size: 10px;
+    -unity-font-style: bold;
+    color: #A0B0C0;
+    letter-spacing: 0.5px;
+}
+
+.banner-value {
+    font-size: 16px;
+    -unity-font-style: bold;
+    color: #E8F0FF;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.banner-value-large {
+    font-size: 20px;
+    -unity-font-style: bold;
+    color: #FFD700;
+    text-shadow: 0 1px 4px rgba(255, 215, 0, 0.5);
+}
+
+/* Responsive */
+.banner-root {
+    transition-duration: 0.3s;
+}

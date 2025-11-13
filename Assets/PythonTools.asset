@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1ad9865b38bcc4efe85d4970c6d3a997, type: 3}
+  m_Name: PythonTools
+  m_EditorClassIdentifier: MCPForUnity.Editor::MCPForUnity.Editor.Data.PythonToolsAsset
+  pythonFiles:
+  - {fileID: 1042094116111776886, guid: 88aa2b53357111b3f8d9fbc280945142, type: 3}
+  - {fileID: 1042094116111776886, guid: 8e143548eb57b473db5c8c7e5cd8b196, type: 3}
+  - {fileID: 1042094116111776886, guid: f0dd9577fd0b3db15bf739ab788b35f0, type: 3}
+  - {fileID: 1042094116111776886, guid: 7cdab56bb96a88038a917c117dc02c38, type: 3}
+  - {fileID: 1042094116111776886, guid: dfcbc98eb03655d90912474bdf723472, type: 3}
+  - {fileID: 1042094116111776886, guid: 859a7b5bb00286ad582247eec96f191f, type: 3}
+  - {fileID: 1042094116111776886, guid: f9c7469f0c377926d9518bd202323e35, type: 3}
+  useContentHashing: 1
+  fileStates: []

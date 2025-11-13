@@ -5,8 +5,18 @@ using UnityEngine;
 /// </summary>
 public class EnemyVariantAppearance : MonoBehaviour
 {
-    [SerializeField] private Renderer rendererRef;
+    private static readonly string[] ColorPropertyNames = new[] { "_BaseColor", "_Color", "_TintColor" };
+
+    [SerializeField] private Renderer[] renderers;
     [SerializeField] private Color tint = Color.white;
+
+    private MaterialPropertyBlock propertyBlock;
+
+    void Awake()
+    {
+        CacheRenderers();
+        EnsureBlock();
+    }
 
     public void Initialize(Color color)
     {
@@ -14,19 +24,68 @@ public class EnemyVariantAppearance : MonoBehaviour
         Apply();
     }
 
+    void CacheRenderers()
+    {
+        if (renderers != null && renderers.Length > 0)
+        {
+            return;
+        }
+
+        renderers = GetComponentsInChildren<Renderer>(includeInactive: true);
+    }
+
+    void EnsureBlock()
+    {
+        if (propertyBlock == null)
+        {
+            propertyBlock = new MaterialPropertyBlock();
+        }
+    }
+
     void Apply()
     {
-        if (rendererRef == null)
+        CacheRenderers();
+        EnsureBlock();
+
+        if (renderers == null)
         {
-            rendererRef = GetComponentInChildren<Renderer>();
+            return;
         }
-        if (rendererRef != null)
+
+        foreach (var renderer in renderers)
         {
-            if (rendererRef.material != null)
+            if (renderer == null || renderer.sharedMaterial == null)
             {
-                rendererRef.material.color = tint;
+                continue;
+            }
+
+            renderer.GetPropertyBlock(propertyBlock);
+            bool applied = false;
+
+            foreach (string prop in ColorPropertyNames)
+            {
+                if (renderer.sharedMaterial.HasProperty(prop))
+                {
+                    propertyBlock.SetColor(prop, tint);
+                    renderer.SetPropertyBlock(propertyBlock);
+                    applied = true;
+                    break;
+                }
+            }
+
+            if (!applied)
+            {
+                var materials = renderer.materials;
+                for (int i = 0; i < materials.Length; i++)
+                {
+                    if (materials[i] == null)
+                    {
+                        continue;
+                    }
+                    materials[i].color = tint;
+                }
+                renderer.materials = materials;
             }
         }
     }
 }
-

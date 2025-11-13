@@ -1,0 +1,248 @@
+/* Upgrade Panel - Full Height Right Dock */
+.upgrade-root {
+    position: absolute;
+    right: 0;
+    top: 0;
+    height: 100%;
+    flex-direction: row;
+    transition-property: right;
+    transition-duration: 0.3s;
+    transition-timing-function: ease-in-out;
+}
+
+.upgrade-root.docked {
+    right: 0;
+}
+.upgrade-root.docked .upgrade-panel {
+    display: none;
+}
+
+/* Main Panel Container */
+.upgrade-panel {
+    width: 200px;
+    height: 100%;
+    background-color: rgba(15, 20, 30, 0.92);
+    border-left-width: 1px;
+    border-color: rgba(100, 150, 255, 0.4);
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+/* Dock Toggle Button (Right Side) */
+.dock-toggle-right {
+    width: 24px;
+    height: 60px;
+    position: absolute;
+    left: -24px;
+    top: 50%;
+    margin-top: -30px;
+    background-color: rgba(40, 60, 120, 0.9);
+    border-width: 1px;
+    border-right-width: 0;
+    border-color: rgba(100, 150, 255, 0.4);
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 6px;
+    font-size: 16px;
+    -unity-font-style: bold;
+    color: #E8F0FF;
+    padding: 0;
+}
+
+.dock-toggle-right:hover {
+    background-color: rgba(60, 90, 160, 1);
+    color: #FFFFFF;
+}
+
+.dock-toggle-right:active {
+    background-color: rgba(50, 80, 140, 1);
+}
+
+/* Header with Title and Close */
+.upgrade-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    background-color: rgba(40, 60, 120, 0.7);
+    padding: 10px 12px;
+    border-bottom-width: 1px;
+    border-color: rgba(100, 150, 255, 0.3);
+}
+
+.upgrade-title {
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: #E8F0FF;
+    letter-spacing: 0.5px;
+}
+
+.close-button {
+    width: 22px;
+    height: 22px;
+    background-color: rgba(255, 80, 80, 0.3);
+    border-radius: 11px;
+    border-width: 0;
+    font-size: 14px;
+    color: #FFB0B0;
+    padding: 0;
+    margin: 0;
+    -unity-text-align: middle-center;
+}
+
+.close-button:hover {
+    background-color: rgba(255, 80, 80, 0.6);
+    color: #FFFFFF;
+}
+
+.close-button:active {
+    background-color: rgba(220, 60, 60, 0.8);
+}
+
+/* Level Badge */
+.level-badge {
+    align-items: center;
+    padding: 16px 0;
+    background-color: rgba(30, 40, 60, 0.5);
+    border-bottom-width: 1px;
+    border-color: rgba(100, 150, 255, 0.2);
+}
+
+.level-text {
+    font-size: 22px;
+    -unity-font-style: bold;
+    color: #FFD700;
+    text-shadow: 0 1px 4px rgba(255, 215, 0, 0.5);
+}
+
+/* Stats Container */
+.stats-container {
+    padding: 16px 12px;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.stat-item {
+    flex-direction: column;
+    gap: 6px;
+}
+
+.stat-label {
+    font-size: 10px;
+    -unity-font-style: bold;
+    color: #A0B0C0;
+    letter-spacing: 0.5px;
+}
+
+.stat-progress {
+    height: 10px;
+    background-color: rgba(30, 35, 45, 0.8);
+    border-radius: 5px;
+    border-width: 1px;
+    border-color: rgba(100, 150, 255, 0.2);
+}
+
+.stat-progress .unity-progress-bar__background {
+    background-color: rgba(30, 35, 45, 0.8);
+    border-radius: 5px;
+}
+
+.stat-progress .unity-progress-bar__progress {
+    background-color: #4CAF50;
+    border-radius: 4px;
+}
+
+/* Description Box */
+.desc-box {
+    padding: 10px 12px;
+    background-color: rgba(25, 30, 40, 0.5);
+    margin: 0 12px;
+    border-radius: 4px;
+    border-left-width: 2px;
+    border-color: rgba(100, 150, 255, 0.6);
+}
+
+.desc-text {
+    font-size: 11px;
+    color: #C8D4E8;
+    -unity-font-style: italic;
+}
+
+/* Upgrade Button */
+.upgrade-button {
+    margin: 16px 12px;
+    height: 36px;
+    background-color: rgba(70, 130, 255, 0.9);
+    border-radius: 6px;
+    border-width: 0;
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: #FFFFFF;
+    letter-spacing: 0.5px;
+}
+
+.upgrade-button:hover {
+    background-color: rgba(90, 150, 255, 1);
+    scale: 1.02;
+}
+
+.upgrade-button:active {
+    scale: 0.98;
+}
+
+.upgrade-button:disabled {
+    background-color: rgba(60, 60, 70, 0.6);
+    color: #808090;
+}
+
+/* Footer Status */
+.upgrade-footer {
+    padding: 10px 12px;
+    background-color: rgba(20, 25, 35, 0.8);
+    border-top-width: 1px;
+    border-color: rgba(100, 150, 255, 0.2);
+    align-items: center;
+    margin-top: auto;
+}
+
+.status-text {
+    font-size: 11px;
+    color: #90A0B0;
+    -unity-text-align: middle-center;
+}
+
+/* ESC Hint */
+.esc-hint {
+    font-size: 9px;
+    color: rgba(160, 176, 192, 0.6);
+    -unity-text-align: middle-center;
+    margin-top: 3px;
+    -unity-font-style: italic;
+}
+
+/* Animations */
+.upgrade-root {
+    transition-duration: 0.3s;
+}
+
+/* Empty State */
+.empty-state {
+    flex-grow: 1;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    padding: 40px 20px;
+}
+
+.empty-state-text {
+    font-size: 18px;
+    -unity-font-style: bold;
+    color: #E8F0FF;
+    margin-bottom: 12px;
+    -unity-text-align: middle-center;
+}
+
+.empty-state-hint {
+    font-size: 11px;
+    color: #A0B0C0;
+    -unity-text-align: middle-center;
+    -unity-font-style: italic;
+}

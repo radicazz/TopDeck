@@ -1,0 +1,20 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+  <ui:VisualElement name="menu-root" class="menu-root">
+    <!-- Title -->
+    <ui:VisualElement name="title-container" class="title-container">
+      <ui:Label text="TOP DECK" class="game-title"/>
+      <ui:Label text="TOWER DEFENSE" class="game-subtitle"/>
+    </ui:VisualElement>
+    
+    <!-- Menu Buttons -->
+    <ui:VisualElement name="button-container" class="button-container">
+      <ui:Button name="start-button" text="START GAME" class="menu-button menu-button-primary"/>
+      <ui:Button name="quit-button" text="QUIT" class="menu-button menu-button-secondary"/>
+    </ui:VisualElement>
+    
+    <!-- Footer Info -->
+    <ui:VisualElement name="footer" class="menu-footer">
+      <ui:Label text="Click START to begin your defense!" class="footer-text"/>
+    </ui:VisualElement>
+  </ui:VisualElement>
+</ui:UXML>

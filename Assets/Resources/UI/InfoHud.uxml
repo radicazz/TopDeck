@@ -1,0 +1,41 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+  <ui:VisualElement name="info-root" style="flex-grow: 1;">
+    <!-- Info HUD - Left Side Dock (Simplified) -->
+    <ui:VisualElement name="hud-root" class="hud-root">
+      <!-- Main Panel Content -->
+      <ui:VisualElement name="hud-panel" class="hud-panel">
+        <!-- Header -->
+        <ui:VisualElement name="header" class="hud-header">
+          <ui:Label text="GAME INFO" class="hud-title"/>
+        </ui:VisualElement>
+        
+        <!-- Stats Display -->
+        <ui:VisualElement name="stats-container" class="stats-container">
+          <ui:VisualElement name="stat-health" class="stat-item">
+            <ui:Label text="TOWER HEALTH" class="stat-label"/>
+            <ui:ProgressBar name="health-bar" high-value="100" value="100" class="stat-progress"/>
+            <ui:Label name="health-value" text="100 / 100" class="stat-value"/>
+          </ui:VisualElement>
+          
+          <ui:VisualElement name="stat-enemies" class="stat-item">
+            <ui:Label text="ENEMIES ALIVE" class="stat-label"/>
+            <ui:Label name="enemies-value" text="0" class="stat-value-large"/>
+          </ui:VisualElement>
+          
+          <ui:VisualElement name="stat-defenders" class="stat-item">
+            <ui:Label text="DEFENDERS" class="stat-label"/>
+            <ui:Label name="defenders-value" text="0 / 0" class="stat-value"/>
+          </ui:VisualElement>
+        </ui:VisualElement>
+        
+        <!-- Status Messages -->
+        <ui:VisualElement name="status-box" class="status-box">
+          <ui:Label name="status-message" text="Ready to defend!" class="status-message"/>
+        </ui:VisualElement>
+      </ui:VisualElement>
+      
+      <!-- Dock Toggle Button -->
+      <ui:Button name="dock-toggle" text="&lt;" class="dock-toggle"/>
+    </ui:VisualElement>
+  </ui:VisualElement>
+</ui:UXML>
