@@ -12,7 +12,7 @@
         <!-- Stats Display -->
         <ui:VisualElement name="stats-container" class="stats-container">
           <ui:VisualElement name="stat-health" class="stat-item">
-            <ui:Label text="TOWER HEALTH" class="stat-label"/>
+            <ui:Label text="HEALTH" class="stat-label"/>
             <ui:ProgressBar name="health-bar" high-value="100" value="100" class="stat-progress"/>
             <ui:Label name="health-value" text="100 / 100" class="stat-value"/>
           </ui:VisualElement>
@@ -25,6 +25,16 @@
           <ui:VisualElement name="stat-defenders" class="stat-item">
             <ui:Label text="DEFENDERS" class="stat-label"/>
             <ui:Label name="defenders-value" text="0 / 0" class="stat-value"/>
+          </ui:VisualElement>
+          
+          <ui:VisualElement name="stat-money" class="stat-item">
+            <ui:Label text="MONEY" class="stat-label"/>
+            <ui:Label name="money-value" text="$0" class="stat-value"/>
+          </ui:VisualElement>
+          
+          <ui:VisualElement name="stat-wave" class="stat-item">
+            <ui:Label text="WAVE" class="stat-label"/>
+            <ui:Label name="wave-value" text="1" class="stat-value"/>
           </ui:VisualElement>
         </ui:VisualElement>
         

@@ -8,7 +8,7 @@ public class MaterialCreator
     static void CreateMaterials()
     {
         // Create Vertex Displacement Material
-        Shader vertexShader = Shader.Find("Custom/UpgradeVertexDisplacement");
+        Shader vertexShader = Shader.Find("TopDeck/UpgradeVertexDisplacement");
         if (vertexShader != null)
         {
             Material vertexMat = new Material(vertexShader);
@@ -17,7 +17,7 @@ public class MaterialCreator
         }
 
         // Create Color Modulation Material
-        Shader colorShader = Shader.Find("Custom/UpgradeColorModulation");
+        Shader colorShader = Shader.Find("TopDeck/UpgradeColorModulation");
         if (colorShader != null)
         {
             Material colorMat = new Material(colorShader);

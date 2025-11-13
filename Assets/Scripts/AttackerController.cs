@@ -117,17 +117,23 @@ public class AttackerController : MonoBehaviour
             FindPathToEnd();
         }
 
+        // Ensure we have at least 2 waypoints so enemies don't immediately finish path
+        if (currentPath == null || currentPath.Count < 2)
+        {
+            CreateEmergencyPath();
+        }
+
         if (currentPath != null && currentPath.Count > 0)
         {
             targetPosition = currentPath[0];
-            Debug.Log($"Enemy path created with {currentPath.Count} waypoints, first target: {targetPosition}");
+            Debug.Log($"Enemy path ready with {currentPath.Count} waypoints, first target: {targetPosition}");
         }
         else
         {
-            Debug.LogError($"Enemy {gameObject.name} failed to create path! Will be destroyed.");
-            // Don't destroy immediately, let it try to move
-            currentPath = new List<Vector3> { startPosition };
-            targetPosition = startPosition;
+            // Final fallback: create a simple forward path
+            currentPath = new List<Vector3> { startPosition, startPosition + Vector3.forward * 5f };
+            targetPosition = currentPath[0];
+            Debug.LogWarning($"Enemy {gameObject.name} using fallback forward path (2 waypoints)");
         }
     }
 
@@ -566,6 +572,7 @@ public class AttackerController : MonoBehaviour
             GameController.Instance.OnEnemyKilled(this);
         }
 
+        VfxManager.SpawnHit(transform.position);
         Destroy(gameObject);
     }
 
@@ -598,6 +605,14 @@ public class AttackerController : MonoBehaviour
     public int GetMaxHealth()
     {
         return entityHealth != null ? entityHealth.MaxHealth : DefaultMaxHealth;
+    }
+
+    // Apply wave-based difficulty scaling (health handled at initialization)
+    public void ApplyDifficulty(int wave)
+    {
+        moveSpeed *= DifficultyScaling.ScaleSpeed(1f, wave);
+        transform.localScale *= DifficultyScaling.ScaleSize(1f, wave);
+        damageToPlayer = DifficultyScaling.ScaleDamage(damageToPlayer, wave);
     }
 
     // Visualization in Scene view

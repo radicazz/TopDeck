@@ -1,0 +1,23 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+  <ui:VisualElement name="end-root" class="menu-root end-root">
+    <ui:VisualElement name="title-container" class="title-container">
+      <ui:Label text="GAME OVER" class="game-title end-title"/>
+      <ui:Label text="FINAL RESULTS" class="game-subtitle end-subtitle"/>
+    </ui:VisualElement>
+
+    <ui:VisualElement name="stats-container" class="end-stats">
+      <ui:Label name="wave-reached" text="Wave: 1" class="stat-line"/>
+      <ui:Label name="final-money" text="Money: $0" class="stat-line"/>
+    </ui:VisualElement>
+
+    <ui:VisualElement name="button-container" class="button-container">
+      <ui:Button name="play-again-button" text="PLAY AGAIN" class="menu-button menu-button-primary"/>
+      <ui:Button name="main-menu-button" text="MAIN MENU" class="menu-button menu-button-secondary"/>
+      <ui:Button name="quit-button" text="QUIT" class="menu-button menu-button-secondary"/>
+    </ui:VisualElement>
+
+    <ui:VisualElement name="footer" class="menu-footer">
+      <ui:Label text="Thanks for playing!" class="footer-text"/>
+    </ui:VisualElement>
+  </ui:VisualElement>
+</ui:UXML>

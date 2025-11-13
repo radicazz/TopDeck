@@ -155,6 +155,10 @@ public class ProjectileController : MonoBehaviour
             Instantiate(explosionEffect, transform.position, Quaternion.identity);
             Debug.Log($"Created explosion effect at {transform.position}");
         }
+        else
+        {
+            VfxManager.SpawnHit(transform.position);
+        }
 
         // Destroy the projectile
         Destroy(gameObject);
@@ -166,6 +170,10 @@ public class ProjectileController : MonoBehaviour
         if (explosionEffect != null)
         {
             Instantiate(explosionEffect, transform.position, Quaternion.identity);
+        }
+        else
+        {
+            VfxManager.SpawnHit(transform.position);
         }
 
         Destroy(gameObject);

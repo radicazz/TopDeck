@@ -9,7 +9,7 @@ public class InfoHudUIDocument : MonoBehaviour
     [SerializeField] VisualTreeAsset _uxml;
     [SerializeField] StyleSheet _uss;
     UIDocument _doc;
-    Label _healthValue, _enemiesValue, _defendersValue, _statusMessage;
+    Label _healthValue, _enemiesValue, _defendersValue, _statusMessage, _moneyValue, _waveValue;
     ProgressBar _healthBar;
     VisualElement _root, _hudRoot;
     Button _dockToggle;
@@ -101,6 +101,8 @@ public class InfoHudUIDocument : MonoBehaviour
         _healthValue = _root.Q<Label>("health-value");
         _enemiesValue = _root.Q<Label>("enemies-value");
         _defendersValue = _root.Q<Label>("defenders-value");
+        _moneyValue = _root.Q<Label>("money-value");
+        _waveValue = _root.Q<Label>("wave-value");
         _statusMessage = _root.Q<Label>("status-message");
         _healthBar = _root.Q<ProgressBar>("health-bar");
     }
@@ -142,11 +144,23 @@ public class InfoHudUIDocument : MonoBehaviour
             int enemies = gc.GetEnemiesAlive();
             _enemiesValue.text = enemies.ToString();
         }
+
+        // Update money and wave
+        if (_moneyValue != null)
+        {
+            _moneyValue.text = $"${gc.money}";
+        }
+        if (_waveValue != null)
+        {
+            _waveValue.text = gc.currentWave.ToString();
+        }
         
         // Update defenders count (placeholder - implement when defender tracking is available)
         if (_defendersValue != null)
         {
-            _defendersValue.text = "0 / 10"; // TODO: Get actual defender count
+            int defenders = gc.GetActiveDefenderCount();
+            int limit = gc.GetDefenderLimit();
+            _defendersValue.text = limit > 0 ? $"{defenders} / {limit}" : defenders.ToString();
         }
         
         // Update status message

@@ -262,9 +262,32 @@ public class UpgradePanelUIDocument : MonoBehaviour
     {
         var tm = FindFirstObjectByType<ThemeManager>();
         var pal = tm != null ? tm.ActivePalette : null;
-        if (pal == null) return;
-        
-        // Theme is mostly handled by USS, but we can adjust colors if needed
+        if (tm == null || pal == null)
+        {
+            return;
+        }
+
+        if (_panelContainer != null)
+        {
+            _panelContainer.style.backgroundColor = pal.PanelBackground;
+        }
+
+        if (_towerBtn != null)
+        {
+            _towerBtn.style.backgroundColor = pal.ButtonNormal;
+            _towerBtn.style.color = pal.TextPrimary;
+        }
+
+        if (_closeBtn != null)
+        {
+            _closeBtn.style.backgroundColor = pal.ButtonPressed;
+            _closeBtn.style.color = pal.TextPrimary;
+        }
+
+        if (_statusText != null)
+        {
+            _statusText.style.color = pal.Info;
+        }
     }
 
     public void ShowPanel()

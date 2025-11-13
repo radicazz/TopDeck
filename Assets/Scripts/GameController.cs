@@ -81,11 +81,14 @@ public class GameController : MonoBehaviour
     private List<Vector3> pathPoints = new List<Vector3>();
 
     // Tower Placement
+    [Header("Tower Limits")]
+    [SerializeField] private int maxDefenders = 10;
     private Camera mainCamera;
     private GameObject highlightedTile;
     private Color originalTileColor;
     private LayerMask tileLayerMask = 1; // Ground layer
     private LayerMask towerLayerMask = -1; // All layers initially
+    private readonly List<DefenderUpgrade> placedDefenders = new List<DefenderUpgrade>();
 
     // Enemy Management
     private List<AttackerController> activeEnemies = new List<AttackerController>();
@@ -191,6 +194,7 @@ public class GameController : MonoBehaviour
 
         Debug.Log($"Game initialized - Money: ${money}, Health: {health}, Wave: {currentWave}");
         UpdateUI();
+        RefreshDefenderRoster();
     }
 
     void EnsureAttackerTypesConfigured()
@@ -567,6 +571,15 @@ void HandleTowerPlacement()
 
     bool IsPointerOverBlockingUI()
     {
+        if (UIToolkitPointerBlocker.IsPointerBlocking())
+        {
+            if (debugMode)
+            {
+                Debug.Log("[IsPointerOverBlockingUI] Pointer over UI Toolkit panel");
+            }
+            return true;
+        }
+
         // First check: Is pointer over ANY UI element?
         if (EventSystem.current == null || !EventSystem.current.IsPointerOverGameObject())
         {
@@ -694,6 +707,12 @@ void PlaceTower(Vector3 position, GameObject targetTile = null)
     {
         Debug.Log($"[PlaceTower] Called with position: {position}, targetTile: {(targetTile ? targetTile.name : "null")}");
 
+        if (IsDefenderLimitReached())
+        {
+            Debug.Log("[PlaceTower] Cannot place tower: defender limit reached.");
+            return;
+        }
+
         Vector3 snapPosition = new Vector3(
             Mathf.Round(position.x / mapController.cellSize) * mapController.cellSize,
             0.5f,
@@ -735,15 +754,67 @@ void PlaceTower(Vector3 position, GameObject targetTile = null)
                 tower.layer = LayerMask.NameToLayer("Default");
             }
 
-            var defenderUpgrade = tower.GetComponent<DefenderUpgrade>();
-            if (defenderUpgrade != null)
-            {
-                Debug.Log($"[PlaceTower] Auto-selecting placed tower");
-                SelectTower(defenderUpgrade);
-            }
+        var defenderUpgrade = tower.GetComponent<DefenderUpgrade>();
+        if (defenderUpgrade != null)
+        {
+            RegisterDefender(defenderUpgrade);
+            Debug.Log($"[PlaceTower] Auto-selecting placed tower");
+            SelectTower(defenderUpgrade);
+        }
         }
 
         ClearHighlight();
+    }
+
+    void RefreshDefenderRoster()
+    {
+        placedDefenders.Clear();
+        var defenders = FindObjectsByType<DefenderUpgrade>(FindObjectsSortMode.None);
+        foreach (var defender in defenders)
+        {
+            RegisterDefender(defender);
+        }
+    }
+
+    void CleanupDefenderRoster()
+    {
+        placedDefenders.RemoveAll(defender => defender == null);
+    }
+
+    void RegisterDefender(DefenderUpgrade defender)
+    {
+        if (defender == null)
+        {
+            return;
+        }
+
+        CleanupDefenderRoster();
+        if (!placedDefenders.Contains(defender))
+        {
+            placedDefenders.Add(defender);
+        }
+    }
+
+    bool IsDefenderLimitReached()
+    {
+        if (maxDefenders <= 0)
+        {
+            return false;
+        }
+
+        CleanupDefenderRoster();
+        return placedDefenders.Count >= maxDefenders;
+    }
+
+    public int GetActiveDefenderCount()
+    {
+        CleanupDefenderRoster();
+        return placedDefenders.Count;
+    }
+
+    public int GetDefenderLimit()
+    {
+        return Mathf.Max(0, maxDefenders);
     }
 
     bool IsTileOccupied(Vector3 tileCenter)
@@ -1384,6 +1455,11 @@ void SelectTower(DefenderUpgrade defender)
         enemiesAlive = 0;
         enemiesRemaining = 0;
         combatPhaseStartTime = 0f;
+
+        // Persist final stats for End Menu UI Toolkit
+        PlayerPrefs.SetInt("LastWaveReached", currentWave);
+        PlayerPrefs.SetInt("FinalMoney", money);
+        PlayerPrefs.Save();
 
         // Reset time scale before transitioning to the end scene
         float defaultTimeScale = (timeScaleOptions != null && timeScaleOptions.Count > 0)

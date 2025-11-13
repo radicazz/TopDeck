@@ -19,7 +19,7 @@ public class SceneAutoWirer : MonoBehaviour
     }
 
     [ContextMenu("Wire Scene Now")]
-    public void WireScene()
+public void WireScene()
     {
         if (verbose) Debug.Log("[SceneAutoWirer] Starting comprehensive auto-wire...");
 
@@ -30,6 +30,7 @@ public class SceneAutoWirer : MonoBehaviour
         WireShaderDrivers();
         WireMaterials();
         WireUIToolkit();
+        WirePostProcessing();
         DisableOldCanvasUI();
         
         if (verbose) Debug.Log("[SceneAutoWirer] Auto-wire complete!");
@@ -128,6 +129,14 @@ public class SceneAutoWirer : MonoBehaviour
         if (drivers == null || drivers.Length == 0)
         {
             if (verbose) Debug.Log("[SceneAutoWirer] No UpgradeVisualShaderDrivers found");
+            // Ensure a global fallback driver so shader properties are still driven
+            var fallbackGO = GameObject.Find("_UpgradeShaderGlobals");
+            if (fallbackGO == null)
+            {
+                fallbackGO = new GameObject("_UpgradeShaderGlobals");
+                fallbackGO.AddComponent<UpgradeGlobalShaderDriver>();
+                if (verbose) Debug.Log("[SceneAutoWirer] Created UpgradeGlobalShaderDriver for global shader properties");
+            }
             return;
         }
 
@@ -235,10 +244,12 @@ public class SceneAutoWirer : MonoBehaviour
                 {
                     SetField(bannerScript, "_uss", bannerUss);
                 }
-                
+
                 if (verbose && bannerUxml != null) Debug.Log("[SceneAutoWirer] Assigned TopBanner UXML/USS");
                 #endif
             }
+
+            EnsurePointerBlocker(topBannerGO, blockWhenHidden: false);
         }
         
         // Wire InfoHud UI Toolkit
@@ -309,6 +320,8 @@ public class SceneAutoWirer : MonoBehaviour
             if (uss != null) SetField(infoHudScript, "_uss", uss);
             if (verbose) Debug.Log("[SceneAutoWirer] Wired InfoHudUIDocument fields");
         }
+
+        EnsurePointerBlocker(infoHudGO, blockWhenHidden: false);
         
         // Wire UpgradePanel UI Toolkit
         var upgradePanelGO = GameObject.Find("UpgradePanel");
@@ -359,6 +372,8 @@ public class SceneAutoWirer : MonoBehaviour
                 if (panelUss != null) SetField(panelScript, "_uss", panelUss);
                 if (verbose) Debug.Log("[SceneAutoWirer] Wired UpgradePanelUIDocument fields");
             }
+
+            EnsurePointerBlocker(upgradePanelGO, blockWhenHidden: false);
         }
     }
 
@@ -387,10 +402,10 @@ public class SceneAutoWirer : MonoBehaviour
     void SetField(object target, string fieldName, object value)
     {
         var field = target.GetType().GetField(fieldName,
-            System.Reflection.BindingFlags.NonPublic | 
-            System.Reflection.BindingFlags.Public | 
+            System.Reflection.BindingFlags.NonPublic |
+            System.Reflection.BindingFlags.Public |
             System.Reflection.BindingFlags.Instance);
-        
+
         if (field != null)
         {
             field.SetValue(target, value);
@@ -398,6 +413,74 @@ public class SceneAutoWirer : MonoBehaviour
         else if (verbose)
         {
             Debug.LogWarning($"[SceneAutoWirer] Field '{fieldName}' not found on {target.GetType().Name}");
+        }
+    }
+
+
+    void EnsurePointerBlocker(GameObject target, bool blockWhenHidden)
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        var blocker = target.GetComponent<UIToolkitPointerBlocker>();
+        if (blocker == null)
+        {
+            blocker = target.AddComponent<UIToolkitPointerBlocker>();
+            if (verbose) Debug.Log($"[SceneAutoWirer] Added UIToolkitPointerBlocker to {target.name}");
+        }
+
+        blocker.BlockWhenHidden = blockWhenHidden;
+    }
+
+
+void WirePostProcessing()
+    {
+        // Attach tint to Main Camera for a simple fullscreen effect
+        var cam = Camera.main;
+        if (cam != null && cam.GetComponent<PostProcessTint>() == null)
+        {
+            cam.gameObject.AddComponent<PostProcessTint>();
+            if (verbose) Debug.Log("[SceneAutoWirer] Added PostProcessTint to Main Camera");
+        }
+
+        // Ensure a global Volume driven by PostProcessPulseController
+        var pulse = FindFirstObjectByType<PostProcessPulseController>();
+        if (pulse == null)
+        {
+            var go = new GameObject("_PostProcessing");
+            pulse = go.AddComponent<PostProcessPulseController>();
+        }
+
+        var vol = pulse.GetComponent<UnityEngine.Rendering.Volume>();
+        if (vol != null && vol.sharedProfile == null && vol.profile == null)
+        {
+            vol.isGlobal = true;
+            var prof = ScriptableObject.CreateInstance<UnityEngine.Rendering.VolumeProfile>();
+            vol.profile = prof;
+            // Add basic URP overrides so volume weight has a visual effect
+            var ca = prof.Add<UnityEngine.Rendering.Universal.ColorAdjustments>(true);
+            ca.colorFilter.overrideState = true;
+            ca.colorFilter.value = new Color(0.9f, 0.8f, 1f, 1f);
+            ca.postExposure.overrideState = true;
+            ca.postExposure.value = 0.5f;
+
+            var vg = prof.Add<UnityEngine.Rendering.Universal.Vignette>(true);
+            vg.intensity.overrideState = true;
+            vg.intensity.value = 0.35f;
+            vg.smoothness.overrideState = true;
+            vg.smoothness.value = 0.8f;
+
+            // Let the pulse controller use this profile if needed
+            SetField(pulse, "fallbackProfile", prof);
+
+            if (verbose) Debug.Log("[SceneAutoWirer] Created runtime VolumeProfile with overrides for post-processing");
+            // Ensure visible baseline even at full health
+            var curve = new AnimationCurve();
+            curve.AddKey(0f, 0.2f);
+            curve.AddKey(1f, 1f);
+            SetField(pulse, "intensityByHealth", curve);
         }
     }
 }
